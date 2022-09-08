@@ -1,27 +1,38 @@
 use crate::board::*;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum SpecialMoveType {
+    Normal,
+    EnPassant,
+    Castle
+}
+
 #[derive(Clone, Copy)]
 pub struct Move {
     pub start_square: usize,
     pub end_square: usize,
     pub moved_piece: Piece,
     pub replaced_piece: Piece,
+    pub old_en_passant_chance: Option<usize>,
+    pub special_move_type: SpecialMoveType
 }
 
 impl Move {
 
-    fn new(board: &Board, start_square: usize, end_square: usize) -> Move {
+    fn new(board: &Board, start_square: usize, end_square: usize, special_move_type: SpecialMoveType) -> Move {
         Move {
             start_square: start_square,
             end_square: end_square,
             moved_piece: board.board[start_square],
-            replaced_piece: board.board[end_square]
+            replaced_piece: board.board[end_square],
+            old_en_passant_chance: board.en_passant_chance,
+            special_move_type: special_move_type
         }
     }
 
     fn index_to_an(idx: usize) -> String {
 
-        let rank = idx / 8 + 1;
+        let rank = (8 - idx / 8);
         let file = String::from("abcdefgh").chars().nth(idx % 8).unwrap();
     
         return format!("{}{}", file, rank);
@@ -51,7 +62,7 @@ impl Move {
                 Move::index_to_an(self.start_square)
             },
 
-            if self.replaced_piece != Piece::Empty {"x"} else {""},
+            if self.replaced_piece != Piece::Empty || self.special_move_type == SpecialMoveType::EnPassant {"x"} else {""},
 
             Move::index_to_an(self.end_square)
 
@@ -98,7 +109,7 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, row_o
         return AddResult::Fail;
     }
 
-    let new_move = Move::new(&board, start_square, end_square);
+    let new_move = Move::new(&board, start_square, end_square, SpecialMoveType::Normal);
     let result = if new_move.replaced_piece != Piece::Empty {AddResult::Capture} else {AddResult::Move};
 
     moves.push(new_move);
@@ -141,7 +152,7 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
     }
 }
 
-pub fn get_possible_moves(board: &Board) -> Vec<Move> {
+pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
 
     let side_to_move = board.side_to_move;
     let mut moves: Vec<Move> = Vec::new();
@@ -149,7 +160,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
     for (square, piece) in board.board.iter().enumerate() {
 
         let row = square / 8;
-        // let col = square % 8;
+        let col = square % 8;
 
         match piece {
 
@@ -159,6 +170,27 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
                 if side_to_move == Colour::Black {
 
+                    try_add_move(&mut moves, board, square, 1, 0, MoveType::NonCapture);
+                    try_add_move(&mut moves, board, square, 1, -1, MoveType::Capture);
+                    try_add_move(&mut moves, board, square, 1, 1, MoveType::Capture);
+
+                    if row == 1 && board.board[square + 8] == Piece::Empty {
+                        try_add_move(&mut moves, board, square, 2, 0, MoveType::NonCapture);
+                    }
+
+                    match board.en_passant_chance {
+                        Some(en_passant_square) => {
+                            let en_passant_row = en_passant_square / 8;
+                            let en_passant_col = en_passant_square % 8;
+                            if en_passant_row == row && (en_passant_col as isize - col as isize).abs() == 1 {
+                                moves.push(Move::new(&board, square, en_passant_square + 8, SpecialMoveType::EnPassant));
+                            }
+                        }
+                        None => {}
+                    }
+
+                } else {
+
                     try_add_move(&mut moves, board, square, -1, 0, MoveType::NonCapture);
                     try_add_move(&mut moves, board, square, -1, -1, MoveType::Capture);
                     try_add_move(&mut moves, board, square, -1, 1, MoveType::Capture);
@@ -167,14 +199,15 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
                         try_add_move(&mut moves, board, square, -2, 0, MoveType::NonCapture);
                     }
 
-                } else {
-
-                    try_add_move(&mut moves, board, square, 1, 0, MoveType::NonCapture);
-                    try_add_move(&mut moves, board, square, 1, -1, MoveType::Capture);
-                    try_add_move(&mut moves, board, square, 1, 1, MoveType::Capture);
-
-                    if row == 1 && board.board[square + 8] == Piece::Empty {
-                        try_add_move(&mut moves, board, square, 2, 0, MoveType::NonCapture);
+                    match board.en_passant_chance {
+                        Some(en_passant_square) => {
+                            let en_passant_row = en_passant_square / 8;
+                            let en_passant_col = en_passant_square % 8;
+                            if en_passant_row == row && (en_passant_col as isize - col as isize).abs() == 1 {
+                                moves.push(Move::new(&board, square, en_passant_square - 8, SpecialMoveType::EnPassant));
+                            }
+                        }
+                        None => {}
                     }
                     
                 }
@@ -219,6 +252,29 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         }
     }
 
-    return moves;
+    
+
+    if ignore_check {
+        return moves
+    }
+
+    let mut legal_moves: Vec<Move> = Vec::new();
+
+    for pseudo_legal_move in moves { // beyond terrible
+        board.make_move(&pseudo_legal_move);
+        let mut move_is_legal = true;
+        for response_move in get_possible_moves(board, true) {
+            if response_move.end_square == board.black_king || response_move.end_square == board.white_king {
+                move_is_legal = false;
+                break;
+            }
+        }
+        if move_is_legal {
+            legal_moves.push(pseudo_legal_move);
+        }
+        board.undo_move();
+    }
+
+    return legal_moves;
 
 }

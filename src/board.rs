@@ -108,6 +108,10 @@ pub struct Board {
     pub side_to_move: Colour,
     pub turns_taken: usize,
     pub previous_moves: Vec<Move>,
+    pub en_passant_chance: Option<usize>,
+    pub castling_rights: (bool, bool, bool, bool),
+    pub white_king: usize,
+    pub black_king: usize,
 }
 
 impl Board {
@@ -120,14 +124,26 @@ impl Board {
         let mut setup_board: [Piece; 64] = [INIT; 64];
         
         let mut pos = 0;
-        let mut chars_parsed = 0usize;
 
-        for c in chars.clone() {
+        let mut white_king = 0;
+        let mut black_king = 0;
 
-            chars_parsed += 1;
+        while pos < 64 {
+
+            let c = chars.next().unwrap();
 
             if c.is_alphabetic() {
-                setup_board[pos] = Piece::from_char(c);
+
+                let piece = Piece::from_char(c);
+
+                setup_board[pos] = piece;
+
+                match piece {
+                    Piece::King{colour: Colour::White} => {white_king = pos},
+                    Piece::King{colour: Colour::Black} => {black_king = pos},
+                    _ => {}
+                }
+
                 pos += 1;
 
             } else if c.is_numeric() {
@@ -143,11 +159,35 @@ impl Board {
 
         }
 
+        chars.next();
+        let side_to_move = Colour::from_char(chars.next().unwrap());
+        chars.next();
+
+        let (mut white_queenside_castle, mut white_kingside_castle, mut black_queenside_castle, mut black_kingside_castle) = (false, false, false, false); 
+
+        let mut c = 'a';
+
+        loop {
+            c = chars.next().unwrap();
+            match c {
+                'K' => white_kingside_castle = true,
+                'Q' => white_queenside_castle = true,
+                'k' => black_kingside_castle = true,
+                'q' => black_queenside_castle = true,
+                ' ' => break,
+                _ => {}
+            }
+        } 
+
         Board {
             board: setup_board,
-            side_to_move: Colour::from_char(chars.nth(chars_parsed + 1).unwrap()),
+            side_to_move: side_to_move,
             turns_taken: 0, //not correct
-            previous_moves: Vec::new()
+            previous_moves: Vec::new(),
+            en_passant_chance: None,
+            castling_rights: (white_kingside_castle, white_queenside_castle, black_kingside_castle, black_queenside_castle),
+            white_king: white_king,
+            black_king: black_king
         }
     }
 
@@ -192,6 +232,28 @@ impl Board {
         fen += " ";
         fen +=  &self.side_to_move.to_char().to_string();
 
+        fen += " ";
+
+        if self.castling_rights == (false, false, false, false) {
+            fen += "-";
+        }
+
+        if self.castling_rights.0 {
+            fen += "K";
+        }
+
+        if self.castling_rights.1 {
+            fen += "Q";
+        }
+
+        if self.castling_rights.2 {
+            fen += "k";
+        }
+
+        if self.castling_rights.3 {
+            fen += "q";
+        }
+
         return fen;
 
     }
@@ -202,11 +264,34 @@ impl Board {
             self.board[move_to_make.end_square] = Piece::Empty;
         }
 
+        match move_to_make.moved_piece {
+            Piece::King{colour: Colour::White} => {self.white_king = move_to_make.end_square},
+            Piece::King{colour: Colour::Black} => {self.black_king = move_to_make.end_square},
+            _ => {}
+        }
+
         self.board.swap(move_to_make.start_square, move_to_make.end_square);
+
+        if move_to_make.special_move_type == SpecialMoveType::EnPassant {
+            match move_to_make.moved_piece {
+                Piece::Pawn{colour: Colour::White} => {
+                    self.board[move_to_make.end_square + 8] = Piece::Empty;
+                },
+                Piece::Pawn{colour: Colour::Black} => {
+                    self.board[move_to_make.end_square - 8] = Piece::Empty;
+                },
+                _ => {}
+            }
+        }
 
         self.side_to_move = self.side_to_move.opposite();
         self.previous_moves.push(*move_to_make);
         self.turns_taken += 1;
+
+        self.en_passant_chance = match move_to_make.moved_piece {
+            Piece::Pawn{colour: _} if (move_to_make.start_square as isize - move_to_make.end_square as isize).abs() == 16 => {Some(move_to_make.end_square)},
+            _ => None
+        }
 
     }
 
@@ -218,10 +303,29 @@ impl Board {
             self.board[move_to_undo.start_square] = move_to_undo.replaced_piece;
         }
 
+        match move_to_undo.moved_piece {
+            Piece::King{colour: Colour::White} => {self.white_king = move_to_undo.start_square},
+            Piece::King{colour: Colour::Black} => {self.black_king = move_to_undo.start_square},
+            _ => {}
+        }
+
+        if move_to_undo.special_move_type == SpecialMoveType::EnPassant {
+            match move_to_undo.moved_piece {
+                Piece::Pawn{colour: Colour::White} => {
+                    self.board[move_to_undo.end_square + 8] = Piece::Pawn{colour: Colour::Black};
+                },
+                Piece::Pawn{colour: Colour::Black} => {
+                    self.board[move_to_undo.end_square - 8] = Piece::Pawn{colour: Colour::White};
+                },
+                _ => {}
+            }
+        }
+
         self.board.swap(move_to_undo.start_square, move_to_undo.end_square);
 
         self.side_to_move = self.side_to_move.opposite();
         self.turns_taken -= 1;
+        self.en_passant_chance = move_to_undo.old_en_passant_chance;
 
     }
 
