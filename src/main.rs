@@ -1,88 +1,62 @@
-mod board;
-mod eval;
-use std::io::{stdin};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+mod simulator;
+mod player;
 
 fn main() {
 
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let white_player: Box<dyn player::Player>;
+    let black_player: Box<dyn player::Player>;
 
-    let mut board = board::Board::from_fen(String::from(fen));
+    let mut board = simulator::board::Board::default();
 
-    let mut stdin = stdin();
-    let mut line;
-
-    let mut rng = thread_rng();
+    white_player = Box::new(player::RandomPlayer{});
+    black_player = Box::new(player::HumanPlayer{});
 
     loop {
 
         print_nice_board(&board);
-
-        let possible_moves = eval::get_possible_moves(&mut board, false);
-
-        match board.side_to_move {
-            board::Colour::Black => {
-                board.make_move(&possible_moves.choose(&mut rng).unwrap());
-            }
-            board::Colour::White => {
-
-                for possible_move in possible_moves.clone() {
-                    print!("{}, ", possible_move.to_an(&possible_moves));
-                }
-                println!();
-        
-                line = String::new();
-                stdin.read_line(&mut line).unwrap();   
-                
-                line = line.trim().to_string();
-                
-                for possible_move in possible_moves.clone() {
-                    if line == possible_move.to_an(&possible_moves) {
-                        board.make_move(&possible_move);
-                        break;
-                    }
-                }
-            }
-        }
-
-        
-
-    }
-
-}
-
-fn get_num_moves(board: &mut board::Board, depth: usize) -> usize {
-
-    let possible_moves = eval::get_possible_moves(board, false);
-    
-    if depth == 1 {
-        return possible_moves.len();
-    }
-
-    let mut num_moves = 0;
-
-    for possible_move in &possible_moves {
-
-        board.make_move(&possible_move);
-
-        num_moves += get_num_moves(board, depth - 1);
-
-        board.undo_move();
-
-    }
-
-    return num_moves;
-
-}
-
-fn print_nice_board(board: &board::Board) {
-    for row in 0..8 {
-        print!("{}  ", 8 - row);
-        for col in 0..8 {
-            print!("{} ", board.board[col + row * 8].to_char());
-        }
         println!();
+
+        let possible_moves = simulator::eval::get_possible_moves(&mut board, false);
+
+        if possible_moves.is_empty() {
+            break;
+        }
+
+        let move_to_play = match board.side_to_move {
+            simulator::piece::Colour::Black => {
+                black_player.get_move(&board, &possible_moves)
+            }
+            simulator::piece::Colour::White => {
+                white_player.get_move(&board, &possible_moves)
+            }
+        };
+
+        board.make_move(move_to_play);
+
+        if move_to_play.replaced_piece != simulator::piece::Piece::Empty || move_to_play.special_move_type == simulator::eval::SpecialMoveType::EnPassant {
+
+            let counts = board.get_piece_counts();
+
+            println!("{} {} {} {} {} {}", counts.0, counts.1, counts.2, counts.3, counts.4, counts.5);
+
+            match counts {
+                (0, 0, 0, 0, 0, 2) | (0, 1, 0, 0, 0, 2) | (0, 0, 1, 0, 0, 2) => {
+                    break;
+                },
+                _ => {}
+            }
+        }
     }
+}
+
+fn print_nice_board(board: &simulator::board::Board) {
+    for row in 0..8 {
+        print!("{} ", 8 - row);
+        for col in 0..8 {
+            print!("|{}", board.board[col + row * 8].to_char());
+        }
+        println!("|");
+    }
+    println!("  ----------------");
     println!("   a b c d e f g h");
 }

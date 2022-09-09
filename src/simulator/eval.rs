@@ -1,4 +1,5 @@
-use crate::board::*;
+use crate::simulator::piece::*;
+use crate::simulator::board::*;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum SpecialMoveType {
@@ -14,6 +15,7 @@ pub struct Move {
     pub moved_piece: Piece,
     pub replaced_piece: Piece,
     pub old_en_passant_chance: Option<usize>,
+    pub old_castling_rights : (bool, bool, bool, bool),
     pub special_move_type: SpecialMoveType
 }
 
@@ -26,13 +28,14 @@ impl Move {
             moved_piece: board.board[start_square],
             replaced_piece: board.board[end_square],
             old_en_passant_chance: board.en_passant_chance,
+            old_castling_rights: board.castling_rights,
             special_move_type: special_move_type
         }
     }
 
     fn index_to_an(idx: usize) -> String {
 
-        let rank = (8 - idx / 8);
+        let rank = 8 - idx / 8;
         let file = String::from("abcdefgh").chars().nth(idx % 8).unwrap();
     
         return format!("{}{}", file, rank);
@@ -44,28 +47,42 @@ impl Move {
         let mut same_dest_moves: Vec<&Move> = Vec::new();
 
         for possible_move in possible_moves {
-            if possible_move.end_square == self.end_square && possible_move.start_square != self.start_square && possible_move.moved_piece == self.moved_piece {
+            if possible_move.moved_piece == self.moved_piece && possible_move.end_square == self.end_square && possible_move.start_square != self.start_square {
                 same_dest_moves.push(possible_move);
             }
         }
 
-        return format!("{}{}{}{}", 
-        
+        if self.special_move_type == SpecialMoveType::Castle {
+            return String::from(match self.moved_piece.get_colour() {
+                Colour::Black => {
+                    if self.end_square == 3 {
+                        "o-o-o"
+                    } else {
+                        "o-o"
+                    }
+                },
+                Colour::White => {
+                    if self.end_square == 62 {
+                        "O-O"
+                    } else {
+                        "O-O-O"
+                    }
+                }
+            });
+        }
+
+        return format!("{}{}{}{}",
             match self.moved_piece {
                 Piece::Pawn {colour: _} => String::from(""),
                 piece => piece.to_char().to_string(),
             },
-
             if same_dest_moves.is_empty() {
                 String::from("")
             } else {
                 Move::index_to_an(self.start_square)
             },
-
             if self.replaced_piece != Piece::Empty || self.special_move_type == SpecialMoveType::EnPassant {"x"} else {""},
-
             Move::index_to_an(self.end_square)
-
         );
     }
 }
@@ -237,6 +254,7 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
             },
 
             Piece::King{colour} if *colour == side_to_move => {
+
                 try_add_move(&mut moves, board, square, -1, -1, MoveType::Move);
                 try_add_move(&mut moves, board, square, -1, 0, MoveType::Move);
                 try_add_move(&mut moves, board, square, -1, 1, MoveType::Move);
@@ -245,14 +263,32 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
                 try_add_move(&mut moves, board, square, 1, -1, MoveType::Move);
                 try_add_move(&mut moves, board, square, 1, 0, MoveType::Move);
                 try_add_move(&mut moves, board, square, 1, 1, MoveType::Move);
+
+                match colour {
+                    Colour::White => {
+                        if board.castling_rights.1 && board.board[57] == Piece::Empty && board.board[58] == Piece::Empty && board.board[59] == Piece::Empty {
+                            moves.push(Move::new(&board, square, 58, SpecialMoveType::Castle));
+                        }
+                        if board.castling_rights.0 && board.board[61] == Piece::Empty && board.board[62] == Piece::Empty {
+                            moves.push(Move::new(&board, square, 62, SpecialMoveType::Castle));
+                        }
+                    },
+                    Colour::Black => {
+                        if board.castling_rights.3 && board.board[1] == Piece::Empty && board.board[2] == Piece::Empty && board.board[3] == Piece::Empty {
+                            moves.push(Move::new(&board, square, 2, SpecialMoveType::Castle));
+                        }
+                        if board.castling_rights.2 && board.board[5] == Piece::Empty && board.board[6] == Piece::Empty {
+                            moves.push(Move::new(&board, square, 6, SpecialMoveType::Castle));
+                        }
+                    },
+                }
+
             },
             
             _ => {},
 
         }
     }
-
-    
 
     if ignore_check {
         return moves
@@ -276,5 +312,29 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
     }
 
     return legal_moves;
+
+}
+
+pub fn get_num_moves(board: &mut Board, depth: usize) -> usize {
+
+    let possible_moves = get_possible_moves(board, false);
+    
+    if depth == 1 {
+        return possible_moves.len();
+    }
+
+    let mut num_moves = 0;
+
+    for possible_move in &possible_moves {
+
+        board.make_move(&possible_move);
+
+        num_moves += get_num_moves(board, depth - 1);
+
+        board.undo_move();
+
+    }
+
+    return num_moves;
 
 }
