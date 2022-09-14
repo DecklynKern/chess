@@ -160,6 +160,46 @@ impl Board {
 
     }
 
+    pub fn index_to_an(idx: usize) -> String {
+
+        let rank = 8 - idx / 8;
+        let file = String::from("abcdefgh").chars().nth(idx % 8).unwrap();
+    
+        return format!("{}{}", file, rank);
+
+    }
+
+    pub fn long_an_to_index(long_an: String) -> usize {
+
+        let mut chars = long_an.chars();
+        0usize + match chars.next().unwrap() {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => unreachable!()
+        } + 8 * (chars.next().unwrap().to_digit(10).unwrap() as usize - 1)
+    }
+
+    pub fn index_to_long_an(idx: usize) -> String {
+        format!("{}{}", match idx % 8 {
+            0 => "a",
+            1 => "b",
+            2 => "c",
+            3 => "d",
+            4 => "e",
+            5 => "f",
+            6 => "g",
+            7 => "h",
+            _ => unreachable!()
+        }, (idx / 8).to_string())
+
+    }
+
     pub fn get_piece_counts(&self) -> (usize, usize, usize, usize, usize, usize) {
 
         let mut piece_counts = (0, 0, 0, 0, 0, 0); 
@@ -194,15 +234,15 @@ impl Board {
 
         self.board.swap(move_to_make.start_square, move_to_make.end_square);
 
-        match (move_to_make.special_move_type, move_to_make.moved_piece.get_colour()) {
-            (SpecialMoveType::Normal, _) => {},
-            (SpecialMoveType::EnPassant, Colour::White) => {
+        match (move_to_make.is_en_passant, move_to_make.is_castle, move_to_make.moved_piece.get_colour()) {
+            (false, false, _) => {},
+            (true, false, Colour::White) => {
                 self.board[move_to_make.end_square + 8] = Piece::Empty;
             },
-            (SpecialMoveType::EnPassant, Colour::Black) => {
+            (true, false, Colour::Black) => {
                 self.board[move_to_make.end_square - 8] = Piece::Empty;
             },
-            (SpecialMoveType::Castle, Colour::White) => {
+            (false, true, Colour::White) => {
                 if move_to_make.end_square == 58 {
                     self.board[56] = Piece::Empty;
                     self.board[59] = Piece::Rook{colour: Colour::White};
@@ -213,7 +253,7 @@ impl Board {
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
             },
-            (SpecialMoveType::Castle, Colour::Black) => {
+            (false, true, Colour::Black) => {
                 if move_to_make.end_square == 2 {
                     self.board[0] = Piece::Empty;
                     self.board[3] = Piece::Rook{colour: Colour::Black};
@@ -223,7 +263,8 @@ impl Board {
                 }
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
-            }
+            },
+            _ => unreachable!()
         };
 
         match move_to_make.moved_piece {
@@ -294,15 +335,15 @@ impl Board {
             _ => {}
         }
 
-        match (move_to_undo.special_move_type, move_to_undo.moved_piece.get_colour()) {
-            (SpecialMoveType::Normal, _) => {}
-            (SpecialMoveType::EnPassant, Colour::White) => {
+        match (move_to_undo.is_en_passant, move_to_undo.is_castle, move_to_undo.moved_piece.get_colour()) {
+            (false, false, _) => {}
+            (true, false, Colour::White) => {
                 self.board[move_to_undo.end_square + 8] = Piece::Pawn{colour: Colour::Black};
             },
-            (SpecialMoveType::EnPassant, Colour::Black) => {
+            (true, false, Colour::Black) => {
                 self.board[move_to_undo.end_square - 8] = Piece::Pawn{colour: Colour::White};
             },
-            (SpecialMoveType::Castle, Colour::White) => {
+            (false, true, Colour::White) => {
                 if move_to_undo.end_square == 58 {
                     self.board[56] = Piece::Rook{colour: Colour::White};
                     self.board[59] = Piece::Empty;
@@ -311,7 +352,7 @@ impl Board {
                     self.board[61] = Piece::Empty;
                 }
             }
-            (SpecialMoveType::Castle, Colour::Black) => {
+            (false, true, Colour::Black) => {
                 if move_to_undo.end_square == 2 {
                     self.board[0] = Piece::Rook{colour: Colour::Black};
                     self.board[3] = Piece::Empty;
@@ -319,7 +360,8 @@ impl Board {
                     self.board[7] = Piece::Rook{colour: Colour::Black};
                     self.board[5] = Piece::Empty;
                 }
-            }
+            },
+            _ => unreachable!()
         }
 
         self.side_to_move = self.side_to_move.opposite();

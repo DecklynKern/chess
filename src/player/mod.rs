@@ -1,4 +1,4 @@
-use std::io::{stdin};
+use std::io::stdin;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use crate::simulator::board;

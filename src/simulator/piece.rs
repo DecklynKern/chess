@@ -10,7 +10,7 @@ impl Colour {
         match c {
             'w' => Colour::White,
             'b' => Colour::Black,
-            _ => Colour::Black // should not happen
+            _ => unreachable!()
         }
     }
 
@@ -35,7 +35,7 @@ pub enum Piece {
     Bishop {colour: Colour},
     Rook {colour: Colour},
     Queen {colour: Colour},
-    King {colour: Colour},
+    King {colour: Colour}
 }
 
 impl Piece {
@@ -48,7 +48,7 @@ impl Piece {
             Piece::Rook{colour} => colour,
             Piece::Queen{colour} => colour,
             Piece::King{colour} => colour,
-            Piece::Empty => Colour::Black // should not happen
+            Piece::Empty => unreachable!()
         }
     }
 
@@ -70,7 +70,7 @@ impl Piece {
                 'r' => Piece::Rook{colour},
                 'q' => Piece::Queen{colour},
                 'k' => Piece::King{colour},
-                _ => Piece::Pawn{colour} // should not happen
+                _ => unreachable!()
         };
     }
 
