@@ -1,8 +1,19 @@
 use crate::simulator::piece::*;
 use crate::simulator::eval::*;
 
+pub const VALID_SQUARES: [usize; 64] = [
+     26,  27,  28,  29,  30,  31,  32,  33, 
+     38,  39,  40,  41,  42,  43,  44,  45, 
+     50,  51,  52,  53,  54,  55,  56,  57, 
+     62,  63,  64,  65,  66,  67,  68,  69, 
+     74,  75,  76,  77,  78,  79,  80,  81, 
+     86,  87,  88,  89,  90,  91,  92,  93, 
+     98,  99, 100, 101, 102, 103, 104, 105, 
+    110, 111, 112, 113, 114, 115, 116, 117
+];
+
 pub struct Board {
-    pub board: [Piece; 64],
+    board: [Piece; 144],
     pub side_to_move: Colour,
     pub turns_taken: usize,
     pub previous_moves: Vec<Move>,
@@ -18,19 +29,29 @@ impl Board {
         Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
     }
 
+    pub fn get_piece(&self, row: usize, col: usize) -> Piece {
+        self.board[row * 12 + col + 26]
+    }
+
+    pub fn get_piece_abs(&self, pos: usize) -> Piece {
+        self.board[pos]
+    }
+
+    pub fn pos_to_row_col(pos: usize) -> (usize, usize) {
+        (pos / 12 - 2, pos % 12 - 2)
+    }
+
     pub fn from_fen(f: String) -> Board {
 
         let mut chars = f.chars(); 
-
-        const INIT: Piece = Piece::Empty; // thanks https://github.com/rust-lang/rust/issues/44796
-        let mut setup_board: [Piece; 64] = [INIT; 64];
+        let mut setup_board = [BORDER; 144];
         
-        let mut pos = 0;
+        let mut pos = 26;
 
         let mut white_king = 0;
         let mut black_king = 0;
 
-        while pos < 64 {
+        while pos < 118 {
 
             let c = chars.next().unwrap();
 
@@ -41,22 +62,22 @@ impl Board {
                 setup_board[pos] = piece;
 
                 match piece {
-                    Piece::King{colour: Colour::White} => {white_king = pos},
-                    Piece::King{colour: Colour::Black} => {black_king = pos},
+                    WHITE_KING => {white_king = pos},
+                    BLACK_KING => {black_king = pos},
                     _ => {}
                 }
 
                 pos += 1;
 
             } else if c.is_numeric() {
-                pos += c.to_digit(10).unwrap() as usize;
+                for _ in 0..c.to_digit(10).unwrap() as usize {
+                    setup_board[pos] = EMPTY;
+                    pos += 1;
+                }
             
             } else {
                 assert_eq!(c, '/');
-            }
-
-            if pos == 64 {
-                break;
+                pos += 4;
             }
 
         }
@@ -67,7 +88,7 @@ impl Board {
 
         let (mut white_queenside_castle, mut white_kingside_castle, mut black_queenside_castle, mut black_kingside_castle) = (false, false, false, false); 
 
-        let mut c = 'a';
+        let mut c;
 
         loop {
             c = chars.next().unwrap();
@@ -79,7 +100,7 @@ impl Board {
                 ' ' => break,
                 _ => {}
             }
-        } 
+        }
 
         Board {
             board: setup_board,
@@ -107,9 +128,9 @@ impl Board {
 
             for col in 0..8 {
                 
-                match self.board[col + row * 8] {
+                match self.get_piece(row, col) {
 
-                    Piece::Empty => {spaces += 1},
+                    EMPTY => {spaces += 1},
 
                     piece => {
 
@@ -156,79 +177,19 @@ impl Board {
             fen += "q";
         }
 
-        return fen;
-
-    }
-
-    pub fn index_to_an(idx: usize) -> String {
-
-        let rank = 8 - idx / 8;
-        let file = String::from("abcdefgh").chars().nth(idx % 8).unwrap();
-    
-        return format!("{}{}", file, rank);
-
-    }
-
-    pub fn long_an_to_index(long_an: String) -> usize {
-
-        let mut chars = long_an.chars();
-        0usize + match chars.next().unwrap() {
-            'a' => 0,
-            'b' => 1,
-            'c' => 2,
-            'd' => 3,
-            'e' => 4,
-            'f' => 5,
-            'g' => 6,
-            'h' => 7,
-            _ => unreachable!()
-        } + 8 * (chars.next().unwrap().to_digit(10).unwrap() as usize - 1)
-    }
-
-    pub fn index_to_long_an(idx: usize) -> String {
-        format!("{}{}", match idx % 8 {
-            0 => "a",
-            1 => "b",
-            2 => "c",
-            3 => "d",
-            4 => "e",
-            5 => "f",
-            6 => "g",
-            7 => "h",
-            _ => unreachable!()
-        }, (idx / 8).to_string())
-
-    }
-
-    pub fn get_piece_counts(&self) -> (usize, usize, usize, usize, usize, usize) {
-
-        let mut piece_counts = (0, 0, 0, 0, 0, 0); 
-
-        for square in 0..64 {
-            match self.board[square] {
-                Piece::Pawn{colour: _} => piece_counts.0 += 1,
-                Piece::Knight{colour: _} => piece_counts.1 += 1,
-                Piece::Bishop{colour: _} => piece_counts.2 += 1,
-                Piece::Rook{colour: _} => piece_counts.3 += 1,
-                Piece::Queen{colour: _} => piece_counts.4 += 1,
-                Piece::King{colour: _} => piece_counts.5 += 1,
-                _ => {}
-            }
-        }
-
-        return piece_counts;
+        return fen + " - 0 1"; // very not correct
 
     }
 
     pub fn make_move(&mut self, move_to_make: &Move) {
 
-        if move_to_make.replaced_piece != Piece::Empty {
-            self.board[move_to_make.end_square] = Piece::Empty;
+        if move_to_make.replaced_piece != EMPTY {
+            self.board[move_to_make.end_square] = EMPTY;
         }
 
         match move_to_make.moved_piece {
-            Piece::King{colour: Colour::White} => {self.white_king = move_to_make.end_square},
-            Piece::King{colour: Colour::Black} => {self.black_king = move_to_make.end_square},
+            WHITE_KING => {self.white_king = move_to_make.end_square},
+            BLACK_KING => {self.black_king = move_to_make.end_square},
             _ => {}
         }
 
@@ -237,29 +198,29 @@ impl Board {
         match (move_to_make.is_en_passant, move_to_make.is_castle, move_to_make.moved_piece.get_colour()) {
             (false, false, _) => {},
             (true, false, Colour::White) => {
-                self.board[move_to_make.end_square + 8] = Piece::Empty;
+                self.board[move_to_make.end_square + 12] = EMPTY;
             },
             (true, false, Colour::Black) => {
-                self.board[move_to_make.end_square - 8] = Piece::Empty;
+                self.board[move_to_make.end_square - 12] = EMPTY;
             },
             (false, true, Colour::White) => {
-                if move_to_make.end_square == 58 {
-                    self.board[56] = Piece::Empty;
-                    self.board[59] = Piece::Rook{colour: Colour::White};
+                if move_to_make.end_square == 112 {
+                    self.board[110] = EMPTY;
+                    self.board[113] = WHITE_ROOK;
                 } else {
-                    self.board[63] = Piece::Empty;
-                    self.board[61] = Piece::Rook{colour: Colour::White};
+                    self.board[117] = EMPTY;
+                    self.board[115] = WHITE_ROOK;
                 }
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
             },
             (false, true, Colour::Black) => {
-                if move_to_make.end_square == 2 {
-                    self.board[0] = Piece::Empty;
-                    self.board[3] = Piece::Rook{colour: Colour::Black};
+                if move_to_make.end_square == 28 {
+                    self.board[26] = EMPTY;
+                    self.board[29] = BLACK_ROOK;
                 } else {
-                    self.board[7] = Piece::Empty;
-                    self.board[5] = Piece::Rook{colour: Colour::Black};
+                    self.board[33] = EMPTY;
+                    self.board[31] = BLACK_ROOK;
                 }
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
@@ -267,38 +228,40 @@ impl Board {
             _ => unreachable!()
         };
 
+        self.en_passant_chance = None;
+
         match move_to_make.moved_piece {
             Piece::Pawn{colour} => {
                 
-                if (move_to_make.start_square as isize - move_to_make.end_square as isize).abs() == 16 {
+                if (move_to_make.start_square as isize - move_to_make.end_square as isize).abs() == 24 {
                     self.en_passant_chance = Some(move_to_make.end_square);
                 
-                } else if colour == Colour::White && move_to_make.end_square < 8 {
-                    self.board[move_to_make.end_square] = Piece::Queen{colour: Colour::White};
+                } else if colour == Colour::White && move_to_make.end_square < 36 {
+                    self.board[move_to_make.end_square] = WHITE_QUEEN;
 
-                } else if colour == Colour::Black && move_to_make.end_square > 55 {
-                    self.board[move_to_make.end_square] = Piece::Queen{colour: Colour::Black};
+                } else if colour == Colour::Black && move_to_make.end_square > 108 {
+                    self.board[move_to_make.end_square] = BLACK_QUEEN;
                 }   
 
             },
-            Piece::King{colour: Colour::White} => {
+            WHITE_KING => {
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
             },
-            Piece::King{colour: Colour::Black} => {
+            BLACK_KING => {
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
             },
-            Piece::Rook{colour: Colour::White} if move_to_make.start_square == 56 => {
+            WHITE_ROOK if move_to_make.start_square == 110 => {
                 self.castling_rights.1 = false;
             }
-            Piece::Rook{colour: Colour::White} if move_to_make.start_square == 63 => {
+            WHITE_ROOK if move_to_make.start_square == 117 => {
                 self.castling_rights.0 = false;
             }
-            Piece::Rook{colour: Colour::Black} if move_to_make.start_square == 0 => {
+            BLACK_ROOK if move_to_make.start_square == 26 => {
                 self.castling_rights.3 = false;
             }
-            Piece::Rook{colour: Colour::Black} if move_to_make.start_square == 7 => {
+            BLACK_ROOK if move_to_make.start_square == 33 => {
                 self.castling_rights.2 = false;
             }
             _ => {}
@@ -314,7 +277,7 @@ impl Board {
 
         let move_to_undo = self.previous_moves.pop().unwrap();
 
-        if move_to_undo.replaced_piece != Piece::Empty {
+        if move_to_undo.replaced_piece != EMPTY {
             self.board[move_to_undo.start_square] = move_to_undo.replaced_piece;
         }
 
@@ -322,43 +285,43 @@ impl Board {
 
         match move_to_undo.moved_piece {
             Piece::Pawn{colour} => {
-                if colour == Colour::White && move_to_undo.end_square < 8 {
-                    self.board[move_to_undo.start_square] = Piece::Pawn{colour: Colour::White};
+                if colour == Colour::White && move_to_undo.end_square < 36 {
+                    self.board[move_to_undo.start_square] = WHITE_PAWN;
 
-                } else if colour == Colour::Black && move_to_undo.end_square > 55 {
-                    self.board[move_to_undo.start_square] = Piece::Pawn{colour: Colour::Black};
+                } else if colour == Colour::Black && move_to_undo.end_square > 108 {
+                    self.board[move_to_undo.start_square] = BLACK_PAWN;
                 }   
 
             },
-            Piece::King{colour: Colour::White} => {self.white_king = move_to_undo.start_square},
-            Piece::King{colour: Colour::Black} => {self.black_king = move_to_undo.start_square},
+            WHITE_KING => {self.white_king = move_to_undo.start_square},
+            BLACK_KING => {self.black_king = move_to_undo.start_square},
             _ => {}
         }
 
         match (move_to_undo.is_en_passant, move_to_undo.is_castle, move_to_undo.moved_piece.get_colour()) {
             (false, false, _) => {}
             (true, false, Colour::White) => {
-                self.board[move_to_undo.end_square + 8] = Piece::Pawn{colour: Colour::Black};
+                self.board[move_to_undo.end_square + 12] = BLACK_PAWN;
             },
             (true, false, Colour::Black) => {
-                self.board[move_to_undo.end_square - 8] = Piece::Pawn{colour: Colour::White};
+                self.board[move_to_undo.end_square - 12] = WHITE_PAWN;
             },
             (false, true, Colour::White) => {
-                if move_to_undo.end_square == 58 {
-                    self.board[56] = Piece::Rook{colour: Colour::White};
-                    self.board[59] = Piece::Empty;
+                if move_to_undo.end_square == 112 {
+                    self.board[110] = WHITE_ROOK;
+                    self.board[113] = EMPTY;
                 } else {
-                    self.board[63] = Piece::Rook{colour: Colour::White};
-                    self.board[61] = Piece::Empty;
+                    self.board[117] = WHITE_ROOK;
+                    self.board[115] = EMPTY;
                 }
             }
             (false, true, Colour::Black) => {
-                if move_to_undo.end_square == 2 {
-                    self.board[0] = Piece::Rook{colour: Colour::Black};
-                    self.board[3] = Piece::Empty;
+                if move_to_undo.end_square == 28 {
+                    self.board[26] = BLACK_ROOK;
+                    self.board[29] = EMPTY;
                 } else {
-                    self.board[7] = Piece::Rook{colour: Colour::Black};
-                    self.board[5] = Piece::Empty;
+                    self.board[33] = BLACK_ROOK;
+                    self.board[31] = EMPTY;
                 }
             },
             _ => unreachable!()

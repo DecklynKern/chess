@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Colour {
     Black, 
     White
@@ -27,15 +27,16 @@ impl Colour {
 
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Piece {
     Empty,
-    Pawn {colour: Colour},
-    Knight {colour: Colour},
-    Bishop {colour: Colour},
-    Rook {colour: Colour},
-    Queen {colour: Colour},
-    King {colour: Colour}
+    Border,
+    Pawn{colour: Colour},
+    Knight{colour: Colour},
+    Bishop{colour: Colour},
+    Rook{colour: Colour},
+    Queen{colour: Colour},
+    King{colour: Colour}
 }
 
 impl Piece {
@@ -48,7 +49,8 @@ impl Piece {
             Piece::Rook{colour} => colour,
             Piece::Queen{colour} => colour,
             Piece::King{colour} => colour,
-            Piece::Empty => unreachable!()
+            Piece::Empty => Colour::Black,
+            Piece::Border => Colour::Black
         }
     }
 
@@ -87,7 +89,8 @@ impl Piece {
                     Piece::Rook{colour: _} => 'r',
                     Piece::King{colour: _} => 'k',
                     Piece::Queen{colour: _} => 'q',
-                    Piece::Empty => ' '
+                    Piece::Empty => ' ',
+                    Piece::Border => unreachable!()
                 };
 
                 if self.get_colour() == Colour::White {
@@ -100,3 +103,20 @@ impl Piece {
 
     }
 }
+
+pub const EMPTY: Piece = Piece::Empty;
+pub const BORDER: Piece = Piece::Border;
+
+pub const WHITE_PAWN: Piece = Piece::Pawn{colour: Colour::White};
+pub const WHITE_KNIGHT: Piece = Piece::Knight{colour: Colour::White};
+pub const WHITE_BISHOP: Piece = Piece::Bishop{colour: Colour::White};
+pub const WHITE_ROOK: Piece = Piece::Rook{colour: Colour::White};
+pub const WHITE_QUEEN: Piece = Piece::Queen{colour: Colour::White};
+pub const WHITE_KING: Piece = Piece::King{colour: Colour::White};
+
+pub const BLACK_PAWN: Piece = Piece::Pawn{colour: Colour::Black};
+pub const BLACK_KNIGHT: Piece = Piece::Knight{colour: Colour::Black};
+pub const BLACK_BISHOP: Piece = Piece::Bishop{colour: Colour::Black};
+pub const BLACK_ROOK: Piece = Piece::Rook{colour: Colour::Black};
+pub const BLACK_QUEEN: Piece = Piece::Queen{colour: Colour::Black};
+pub const BLACK_KING: Piece = Piece::King{colour: Colour::Black};

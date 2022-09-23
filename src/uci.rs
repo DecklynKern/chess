@@ -1,2 +1,0 @@
-mod sinmulator;
-mod player;

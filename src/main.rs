@@ -1,5 +1,6 @@
 mod simulator;
 mod player;
+mod hash;
 
 use std::io::stdin;
 use std::fs::OpenOptions;
@@ -13,33 +14,52 @@ fn main() {
 
     stdin.read_line(&mut line);
 
-    assert_eq!(line.trim(), "uci");
+    split = line.trim().split(" ");
+
+    match split.next().unwrap() {
+        "uci" => uci(),
+        "perft" => perft(split.next().unwrap().parse::<usize>().unwrap()),
+        _ => internal_sim()
+    }
+
+}
+
+fn log(string: &String) {
+    
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("C:\\Users\\deckl\\OneDrive\\Desktop\\rust\\chess\\log.txt")
+        .unwrap();
+
+    if let Err(e) = write!(file, "{}", string) {
+        eprintln!("Couldn't write to file: {}", e);
+    }
+}
+
+fn uci() {
+
+    let stdin = stdin();
+    let mut line = String::new();
+    let mut split;
 
     println!("id name DeckChess");
     println!("id author Deck");
 
-    println!("uciok");
-
     let mut debug = false;
     let mut board = simulator::board::Board::default();
 
-    let player: Box<dyn player::Player>;
-    player = Box::new(player::RandomPlayer{});
+    let mut player: Box<dyn player::Player>;
+    player = Box::new(player::BasicSearchPlayer::new(6));
 
     loop {
 
         line = String::new();
-        stdin.read_line(&mut line);
-        
-        let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("C:\\Users\\deckl\\OneDrive\\Desktop\\rust\\chess\\output.txt")
-        .unwrap();
-
-        if let Err(e) = write!(file, "{}", line) {
-            eprintln!("Couldn't write to file: {}", e);
+        if stdin.read_line(&mut line).is_err() {
+            continue;
         }
+        
+        log(&line);
 
         split = line.trim().split(" ");
 
@@ -66,19 +86,20 @@ fn main() {
                     Some(arg) => assert_eq!(arg.trim(), "moves"),
                     None => continue
                 }
-                
                 for move_to_play in split {
                     let trimmed = move_to_play.trim();
                     board.make_move(&simulator::eval::Move::new(
                         &board,
-                        simulator::board::Board::long_an_to_index(String::from(trimmed)),
-                        simulator::board::Board::long_an_to_index(trimmed.to_string()[2..4].to_string())
+                        simulator::chess_util::long_an_to_index(String::from(trimmed)),
+                        simulator::chess_util::long_an_to_index(trimmed.to_string()[2..4].to_string())
                     ));
                 }
             },
             "go" => {
-                let possible_moves = simulator::eval::get_possible_moves(&mut board, false);
-                println!("bestmove {}", player.get_move(&board, &possible_moves).to_an(&possible_moves));
+                let possible_moves = simulator::eval::get_possible_moves(&mut board);
+                let mv = player.get_move(&mut board, &possible_moves).to_long_an();
+                println!("bestmove {}", mv);
+                log(&String::from(format!(">>> bestmove {}\n", mv)));
             },
             "stop" => {}, // cope?
             "ponderhit" => {},
@@ -89,63 +110,80 @@ fn main() {
     }
 }
 
-/*
-
-fn main() {
-
-    let white_player: Box<dyn player::Player>;
-    let black_player: Box<dyn player::Player>;
-
+fn perft(depth: usize) {
+    
     let mut board = simulator::board::Board::default();
 
-    white_player = Box::new(player::HumanPlayer{});
-    black_player = Box::new(player::RandomPlayer{});
+    for n in 1..depth {
+        println!("{}: {}", n, simulator::eval::get_num_moves(&mut board, n));
+    }
+
+}
+
+fn internal_sim() {
+
+    let stdin = stdin();
+    let mut line = String::new();
+    
+    let mut board = simulator::board::Board::default();
+
+    let mut p1: Box<dyn player::Player>;
+    let mut p2: Box<dyn player::Player>;
+
+    println!("enter p1 ('h' -> human, 'r' -> random): ");
+
+    line = String::new();
+    stdin.read_line(&mut line);
+
+    p1 = match line.trim() {
+        "h" => Box::new(player::HumanPlayer{}),
+        "r" => Box::new(player::RandomPlayer{}),
+        _ => Box::new(player::BasicSearchPlayer::new(4))
+    };
+
+    println!("enter p2 ('h' -> human, 'r' -> random): ");
+
+    line = String::new();
+    stdin.read_line(&mut line);
+
+    p2 = match line.trim() {
+        "h" => Box::new(player::HumanPlayer{}),
+        "r" => Box::new(player::RandomPlayer{}),
+        _ => Box::new(player::BasicSearchPlayer::new(4))
+    };
 
     loop {
 
-        print_nice_board(&board);
-        println!();
+        for row in 0..8 {
+            for col in 0..8 {
+                print!("{} ", board.get_piece(row, col).to_char());
+            }
+            println!("")
+        }
+        
+        line = String::new();
+        stdin.read_line(&mut line);        
 
-        let possible_moves = simulator::eval::get_possible_moves(&mut board, false);
+        if line.trim() == "undo" {
+            board.undo_move();
+            continue;
+        }
+
+        let possible_moves = simulator::eval::get_possible_moves(&mut board);
 
         if possible_moves.is_empty() {
             break;
         }
 
-        let move_to_play = match board.side_to_move {
-            simulator::piece::Colour::Black => {
-                black_player.get_move(&board, &possible_moves)
-            }
-            simulator::piece::Colour::White => {
-                white_player.get_move(&board, &possible_moves)
-            }
+        let move_to_make = if board.side_to_move == simulator::piece::Colour::White {
+            p1.get_move(&mut board, &possible_moves)
+        } else {
+            p2.get_move(&mut board, &possible_moves)
         };
 
-        board.make_move(move_to_play);
+        println!("{} is played.\n", move_to_make.to_an(&possible_moves));
 
-        if move_to_play.replaced_piece != simulator::piece::Piece::Empty || move_to_play.special_move_type == simulator::eval::SpecialMoveType::EnPassant {
+        board.make_move(move_to_make);
 
-            let counts = board.get_piece_counts();
-
-            match counts {
-                (0, 0, 0, 0, 0, 2) | (0, 1, 0, 0, 0, 2) | (0, 0, 1, 0, 0, 2) => {
-                    print_nice_board(&board);
-                    break;
-                },
-                _ => {}
-            }
-        }
     }
 }
-
-fn print_nice_board(board: &simulator::board::Board) {
-    for row in 0..8 {
-        print!("{} ", 8 - row);
-        for col in 0..8 {
-            print!("|{}", board.board[col + row * 8].to_char());
-        }
-        println!("|");
-    }
-    println!("  ----------------");
-    println!("   a b c d e f g h");
-}*/

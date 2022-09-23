@@ -1,5 +1,6 @@
 use crate::simulator::piece::*;
 use crate::simulator::board::*;
+use crate::simulator::chess_util::*;
 
 #[derive(Clone, Copy)]
 pub struct Move {
@@ -17,8 +18,8 @@ impl Move {
 
     pub fn new(board: &Board, start_square: usize, end_square: usize) -> Move {
 
-        let moved_piece = board.board[start_square];
-        let replaced_piece = board.board[end_square];
+        let moved_piece = board.get_piece_abs(start_square);
+        let replaced_piece = board.get_piece_abs(end_square);
 
         Move {
             start_square: start_square,
@@ -28,14 +29,18 @@ impl Move {
             old_en_passant_chance: board.en_passant_chance,
             old_castling_rights: board.castling_rights,
             is_en_passant: match moved_piece {
-                Piece::Pawn{colour: _} => {((start_square as isize - end_square as isize).abs() - 8).abs() == 1 && replaced_piece == Piece::Empty},
+                Piece::Pawn{colour: _} => ((start_square as isize - end_square as isize).abs() - 12).abs() == 1 && replaced_piece == EMPTY,
                 _ => false
             },
             is_castle: match moved_piece {
-                Piece::King{colour: _} => {(start_square as isize - end_square as isize).abs() == 2},
+                Piece::King{colour: _} => (start_square as isize - end_square as isize).abs() == 2,
                 _ => false
             }
         }
+    }
+
+    pub fn to_long_an(&self) -> String {
+        return format!("{}{}", index_to_long_an(self.start_square), index_to_long_an(self.end_square));
     }
 
     pub fn to_an(&self, possible_moves: &Vec<Move>) -> String {
@@ -51,11 +56,11 @@ impl Move {
 
         if self.is_castle {
             return String::from(match self.end_square {
-                2 => "o-o-o",
-                6 => "o-o",
-                58 => "O-O-O",
-                62 => "O-O",
-                _ => "" // should not happen
+                28 => "o-o-o",
+                32 => "o-o",
+                112 => "O-O-O",
+                116 => "O-O",
+                _ => unreachable!()
             })
         }
 
@@ -67,10 +72,10 @@ impl Move {
             if same_dest_moves.is_empty() {
                 String::from("")
             } else {
-                Board::index_to_an(self.start_square)
+                index_to_an(self.start_square)
             },
-            if self.replaced_piece != Piece::Empty || self.is_en_passant {"x"} else {""},
-            Board::index_to_an(self.end_square)
+            if self.replaced_piece != EMPTY || self.is_en_passant {"x"} else {""},
+            index_to_an(self.end_square)
         );
     }
 }
@@ -89,33 +94,30 @@ enum MoveType{
     Move
 }
 
-fn invalid_square(start_square: usize, row_offset: isize, col_offset: isize) -> bool {
+const KNIGHT_OFFSETS: [isize; 8] = [-25, -23, -14, -10, 25, 23, 14, 10];
+const KING_OFFSETS: [isize; 8] = [-13, -12, -11, -1, 13, 12, 11, 1];
+const ORTHOGONAL_OFFSETS: [isize; 4] = [-12, -1, 12, 1];
+const DIAGONAL_OFFSETS: [isize; 4] = [-13, -11, 13, 11];
 
-    let col = (start_square % 8) as isize + col_offset;
-    let row = (start_square / 8) as isize + row_offset;
+fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offset: isize, move_type: MoveType) -> AddResult {
 
-    return col < 0 || col > 7 || row < 0 || row > 7;
+    let end_square = (start_square as isize + offset) as usize;
+    let end_piece = board.get_piece_abs(end_square);
 
-}
-
-fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, row_offset: isize, col_offset: isize, move_type: MoveType) -> AddResult {
-
-    if invalid_square(start_square, row_offset, col_offset) {
+    if end_piece == BORDER {
         return AddResult::Fail;
     }
 
-    let end_square = (start_square as isize + row_offset * 8 + col_offset) as usize;
-    let end_piece = board.board[end_square];
-    let end_piece_empty = end_piece == Piece::Empty;
+    let end_piece_empty = end_piece == EMPTY;
 
-    if (!end_piece_empty && board.board[start_square].get_colour() == end_piece.get_colour()) ||
-        (move_type == MoveType::Capture && end_piece_empty) ||
+    if (!end_piece_empty && board.get_piece_abs(start_square).get_colour() == end_piece.get_colour()) ||
+        (move_type == MoveType::Capture && (end_piece_empty || board.get_piece_abs(start_square).get_colour() == end_piece.get_colour())) ||
         (move_type == MoveType::NonCapture && !end_piece_empty) {
         return AddResult::Fail;
     }
 
     let new_move = Move::new(&board, start_square, end_square);
-    let result = if new_move.replaced_piece != Piece::Empty {AddResult::Capture} else {AddResult::Move};
+    let result = if new_move.replaced_piece != EMPTY {AddResult::Capture} else {AddResult::Move};
 
     moves.push(new_move);
 
@@ -125,70 +127,72 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, row_o
 
 fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, orthogonal: bool, diagonal: bool) {
 
-    let mut move_dirs: Vec<(isize, isize)> = Vec::new();
-
     if orthogonal {
-        move_dirs.push((0, -1));
-        move_dirs.push((0, 1));
-        move_dirs.push((-1, 0));
-        move_dirs.push((1, 0));
+
+        for offset in ORTHOGONAL_OFFSETS {
+
+            let mut total_offset = 0;
+    
+            loop {
+    
+                total_offset += offset;
+    
+                if try_add_move(moves, board, start_square, total_offset, MoveType::Move) != AddResult::Move {
+                    break;
+                }
+    
+            }
+        }
     }
 
     if diagonal {
-        move_dirs.push((-1, -1));
-        move_dirs.push((-1, 1));
-        move_dirs.push((1, -1));
-        move_dirs.push((1, 1));
-    }
 
-    for (row_offset, col_offset) in move_dirs {
+        for offset in DIAGONAL_OFFSETS {
 
-        let mut num_slides = 0;
-
-        loop {
-
-            num_slides += 1;
-
-            if try_add_move(moves, board, start_square, row_offset * num_slides, col_offset * num_slides, MoveType::Move) != AddResult::Move {
-                break;
+            let mut total_offset = 0;
+    
+            loop {
+    
+                total_offset += offset;
+    
+                if try_add_move(moves, board, start_square, total_offset, MoveType::Move) != AddResult::Move {
+                    break;
+                }
+    
             }
-
         }
     }
 }
 
-pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
+pub fn get_possible_moves(board: &mut Board) -> Vec<Move> {
 
     let side_to_move = board.side_to_move;
     let mut moves: Vec<Move> = Vec::new();
 
-    for (square, piece) in board.board.iter().enumerate() {
+    for square in VALID_SQUARES {
 
-        let row = square / 8;
-        let col = square % 8;
+        let (row, _) = Board::pos_to_row_col(square);
 
-        match piece {
+        match &board.get_piece_abs(square) {
 
             Piece::Empty => {},
 
             Piece::Pawn{colour} if *colour == side_to_move => {
 
-                if side_to_move == Colour::Black {
+                if side_to_move == Colour::White {
 
-                    try_add_move(&mut moves, board, square, 1, 0, MoveType::NonCapture);
-                    try_add_move(&mut moves, board, square, 1, -1, MoveType::Capture);
-                    try_add_move(&mut moves, board, square, 1, 1, MoveType::Capture);
+                    try_add_move(&mut moves, board, square, -12, MoveType::NonCapture);
+                    try_add_move(&mut moves, board, square, -11, MoveType::Capture);
+                    try_add_move(&mut moves, board, square, -13, MoveType::Capture);
 
-                    if row == 1 && board.board[square + 8] == Piece::Empty {
-                        try_add_move(&mut moves, board, square, 2, 0, MoveType::NonCapture);
+                    if row == 6 && board.get_piece_abs(square - 12) == EMPTY {
+                        try_add_move(&mut moves, board, square, -24, MoveType::NonCapture);
                     }
 
                     match board.en_passant_chance {
                         Some(en_passant_square) => {
-                            let en_passant_row = en_passant_square / 8;
-                            let en_passant_col = en_passant_square % 8;
-                            if en_passant_row == row && (en_passant_col as isize - col as isize).abs() == 1 {
-                                moves.push(Move::new(&board, square, en_passant_square + 8));
+                            if (en_passant_square as isize - square as isize).abs() == 1 {
+                                moves.push(Move::new(&board, square, en_passant_square - 12));
                             }
                         }
                         None => {}
@@ -196,20 +200,18 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
 
                 } else {
 
-                    try_add_move(&mut moves, board, square, -1, 0, MoveType::NonCapture);
-                    try_add_move(&mut moves, board, square, -1, -1, MoveType::Capture);
-                    try_add_move(&mut moves, board, square, -1, 1, MoveType::Capture);
+                    try_add_move(&mut moves, board, square, 12, MoveType::NonCapture);
+                    try_add_move(&mut moves, board, square, 11, MoveType::Capture);
+                    try_add_move(&mut moves, board, square, 13, MoveType::Capture);
 
-                    if row == 6 && board.board[square - 8] == Piece::Empty {
-                        try_add_move(&mut moves, board, square, -2, 0, MoveType::NonCapture);
+                    if row == 1 && board.get_piece_abs(square + 12) == EMPTY {
+                        try_add_move(&mut moves, board, square, 24, MoveType::NonCapture);
                     }
 
                     match board.en_passant_chance {
                         Some(en_passant_square) => {
-                            let en_passant_row = en_passant_square / 8;
-                            let en_passant_col = en_passant_square % 8;
-                            if en_passant_row == row && (en_passant_col as isize - col as isize).abs() == 1 {
-                                moves.push(Move::new(&board, square, en_passant_square - 8));
+                            if (en_passant_square as isize - square as isize).abs() == 1 {
+                                moves.push(Move::new(&board, square, en_passant_square + 12));
                             }
                         }
                         None => {}
@@ -219,14 +221,9 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
             },
 
             Piece::Knight{colour} if *colour == side_to_move => {
-                try_add_move(&mut moves, board, square, -2, -1, MoveType::Move);
-                try_add_move(&mut moves, board, square, -2, 1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 2, -1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 2, 1, MoveType::Move);
-                try_add_move(&mut moves, board, square, -1, -2, MoveType::Move);
-                try_add_move(&mut moves, board, square, -1, 2, MoveType::Move);
-                try_add_move(&mut moves, board, square, 1, 2, MoveType::Move);
-                try_add_move(&mut moves, board, square, 1, -2, MoveType::Move);
+                for offset in KNIGHT_OFFSETS {
+                    try_add_move(&mut moves, board, square, offset, MoveType::Move);
+                }
             },
 
             Piece::Bishop{colour} if *colour == side_to_move => {
@@ -243,59 +240,40 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
 
             Piece::King{colour} if *colour == side_to_move => {
 
-                try_add_move(&mut moves, board, square, -1, -1, MoveType::Move);
-                try_add_move(&mut moves, board, square, -1, 0, MoveType::Move);
-                try_add_move(&mut moves, board, square, -1, 1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 0, -1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 0, 1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 1, -1, MoveType::Move);
-                try_add_move(&mut moves, board, square, 1, 0, MoveType::Move);
-                try_add_move(&mut moves, board, square, 1, 1, MoveType::Move);
+                for offset in KING_OFFSETS {
+                    try_add_move(&mut moves, board, square, offset, MoveType::Move);
+                }
 
                 match colour {
                     Colour::White => {
-                        if board.castling_rights.1 && board.board[57] == Piece::Empty && board.board[58] == Piece::Empty && board.board[59] == Piece::Empty {
-                            moves.push(Move::new(&board, square, 58));
+                        if board.castling_rights.1 && board.get_piece_abs(111) == EMPTY && board.get_piece_abs(112) == EMPTY && board.get_piece_abs(113) == EMPTY {
+                            moves.push(Move::new(&board, square, 112));
                         }
-                        if board.castling_rights.0 && board.board[61] == Piece::Empty && board.board[62] == Piece::Empty {
-                            moves.push(Move::new(&board, square, 62));
+                        if board.castling_rights.0 && board.get_piece_abs(115) == EMPTY && board.get_piece_abs(116) == EMPTY {
+                            moves.push(Move::new(&board, square, 116));
                         }
                     },
                     Colour::Black => {
-                        if board.castling_rights.3 && board.board[1] == Piece::Empty && board.board[2] == Piece::Empty && board.board[3] == Piece::Empty {
-                            moves.push(Move::new(&board, square, 2));
+                        if board.castling_rights.3 && board.get_piece_abs(27) == EMPTY && board.get_piece_abs(28) == EMPTY && board.get_piece_abs(29) == EMPTY {
+                            moves.push(Move::new(&board, square, 28));
                         }
-                        if board.castling_rights.2 && board.board[5] == Piece::Empty && board.board[6] == Piece::Empty {
-                            moves.push(Move::new(&board, square, 6));
+                        if board.castling_rights.2 && board.get_piece_abs(31) == EMPTY && board.get_piece_abs(32) == EMPTY {
+                            moves.push(Move::new(&board, square, 32));
                         }
                     },
                 }
-
             },
-            
-            _ => {},
-
+            _ => {}
         }
-    }
-
-    if ignore_check {
-        return moves
     }
 
     let mut legal_moves: Vec<Move> = Vec::new();
 
-    for pseudo_legal_move in moves { // beyond terrible
+    for pseudo_legal_move in moves { // a bit better now
         board.make_move(&pseudo_legal_move);
-        let mut move_is_legal = true;
-        for response_move in get_possible_moves(board, true) {
-            if response_move.end_square == board.black_king || response_move.end_square == board.white_king {
-                move_is_legal = false;
-                break;
-            }
-        }
-        if move_is_legal {
+        if !is_in_check(&board) {
             legal_moves.push(pseudo_legal_move);
-        }
+        } //else {println!("{}", board.to_fen())}
         board.undo_move();
     }
 
@@ -303,9 +281,100 @@ pub fn get_possible_moves(board: &mut Board, ignore_check: bool) -> Vec<Move> {
 
 }
 
+// assumes a move has just been played
+pub fn is_in_check(board: &Board) -> bool {
+
+    let current_colour = board.side_to_move.opposite();
+
+    let king_square = match current_colour {
+        Colour::White => board.white_king,
+        Colour::Black => board.black_king
+    } as isize;
+
+    let opp_colour = board.side_to_move;
+    let opp_knight = Piece::Knight{colour: opp_colour};
+
+    for offset in KNIGHT_OFFSETS {
+        if board.get_piece_abs((king_square + offset) as usize) == opp_knight {
+            return true;
+        }
+    }
+
+    // assumes no back rank pawns
+    if current_colour == Colour::White {
+        if king_square > 48 && (board.get_piece_abs((king_square - 11) as usize) == BLACK_PAWN || board.get_piece_abs((king_square - 13) as usize) == BLACK_PAWN) {
+            return true;
+        }
+    } else if king_square < 96 && (board.get_piece_abs((king_square + 11) as usize) == WHITE_PAWN || board.get_piece_abs((king_square + 13) as usize) == WHITE_PAWN) {
+        return true;
+    }
+
+    let opp_bishop = Piece::Bishop{colour: opp_colour};
+    let opp_queen = Piece::Queen{colour: opp_colour};
+
+    for dir in DIAGONAL_OFFSETS{
+        
+        let mut test_square = king_square;
+        
+        loop {
+            
+            test_square += dir;
+
+            let piece = board.get_piece_abs(test_square as usize);
+
+            if piece == EMPTY {
+                continue;
+            }
+
+            if piece == opp_bishop || piece == opp_queen {
+                return true;
+            }
+
+            break;
+
+        }
+    }
+    
+    let opp_rook = Piece::Rook{colour: opp_colour};
+
+    for dir in ORTHOGONAL_OFFSETS {
+        
+        let mut test_square = king_square;
+        
+        loop {
+            
+            test_square += dir;
+
+            let piece = board.get_piece_abs(test_square as usize);
+
+            if piece == EMPTY {
+                continue;
+            }
+
+            if piece == opp_rook || piece == opp_queen {
+                return true;
+            }
+
+            break;
+            
+        }
+    }
+    
+    let opp_king = Piece::King{colour: opp_colour};
+
+    for offset in KING_OFFSETS {
+        if board.get_piece_abs((king_square + offset) as usize) == opp_king {
+            return true;
+        }
+    }
+
+    return false;
+
+}
+
 pub fn get_num_moves(board: &mut Board, depth: usize) -> usize {
 
-    let possible_moves = get_possible_moves(board, false);
+    let possible_moves = get_possible_moves(board);
     
     if depth == 1 {
         return possible_moves.len();
@@ -314,13 +383,9 @@ pub fn get_num_moves(board: &mut Board, depth: usize) -> usize {
     let mut num_moves = 0;
 
     for possible_move in &possible_moves {
-
         board.make_move(&possible_move);
-
         num_moves += get_num_moves(board, depth - 1);
-
         board.undo_move();
-
     }
 
     return num_moves;
