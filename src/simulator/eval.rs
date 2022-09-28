@@ -88,7 +88,7 @@ enum AddResult {
 }
 
 #[derive(PartialEq)]
-enum MoveType{
+enum MoveType {
     NonCapture,
     Capture,
     Move
@@ -269,7 +269,7 @@ pub fn get_possible_moves(board: &mut Board) -> Vec<Move> {
 
     let mut legal_moves: Vec<Move> = Vec::new();
 
-    for pseudo_legal_move in moves { // a bit better now
+    for pseudo_legal_move in moves { // a bit better now, still needs work
         board.make_move(&pseudo_legal_move);
         if !is_in_check(&board) {
             legal_moves.push(pseudo_legal_move);
@@ -312,7 +312,7 @@ pub fn is_in_check(board: &Board) -> bool {
     let opp_bishop = Piece::Bishop{colour: opp_colour};
     let opp_queen = Piece::Queen{colour: opp_colour};
 
-    for dir in DIAGONAL_OFFSETS{
+    for dir in DIAGONAL_OFFSETS {
         
         let mut test_square = king_square;
         

@@ -8,13 +8,8 @@ use std::io::prelude::*;
 
 fn main() {
 
-    let stdin = stdin();
-    let mut line = String::new();
-    let mut split;
-
-    stdin.read_line(&mut line);
-
-    split = line.trim().split(" ");
+    let line = get_line();
+    let mut split = line.trim().split(" ");
 
     match split.next().unwrap() {
         "uci" => uci(),
@@ -37,11 +32,14 @@ fn log(string: &String) {
     }
 }
 
-fn uci() {
-
+fn get_line() -> String {
     let stdin = stdin();
     let mut line = String::new();
-    let mut split;
+    stdin.read_line(&mut line).expect("line reading failed");
+    return line;
+}
+
+fn uci() {
 
     println!("id name DeckChess");
     println!("id author Deck");
@@ -49,19 +47,16 @@ fn uci() {
     let mut debug = false;
     let mut board = simulator::board::Board::default();
 
-    let mut player: Box<dyn player::Player>;
-    player = Box::new(player::BasicSearchPlayer::new(6));
+    let mut player: Box<dyn player::player::Player>;
+    player = Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(6));
 
     loop {
 
-        line = String::new();
-        if stdin.read_line(&mut line).is_err() {
-            continue;
-        }
+        let line = get_line();
         
         log(&line);
 
-        split = line.trim().split(" ");
+        let mut split = line.trim().split(" ");
 
         match split.next().unwrap().trim() {
             "debug" => {
@@ -78,21 +73,21 @@ fn uci() {
             "position" => {
                 let arg2 = split.next().unwrap().trim();
                 if arg2 == "startpos" {
-                    board = simulator::board::Board::default();
+                    board = simulator::board::Board::default();                   
+                    match split.next() {
+                        Some(arg) => assert_eq!(arg.trim(), "moves"),
+                        None => continue
+                    }
+                    for move_to_play in split {
+                        let trimmed = move_to_play.trim();
+                        board.make_move(&simulator::eval::Move::new(
+                            &board,
+                            simulator::chess_util::long_an_to_index(String::from(trimmed)),
+                            simulator::chess_util::long_an_to_index(trimmed.to_string()[2..4].to_string())
+                        ));
+                    }
                 } else {
-                    board = simulator::board::Board::from_fen(String::from(arg2));
-                }
-                match split.next() {
-                    Some(arg) => assert_eq!(arg.trim(), "moves"),
-                    None => continue
-                }
-                for move_to_play in split {
-                    let trimmed = move_to_play.trim();
-                    board.make_move(&simulator::eval::Move::new(
-                        &board,
-                        simulator::chess_util::long_an_to_index(String::from(trimmed)),
-                        simulator::chess_util::long_an_to_index(trimmed.to_string()[2..4].to_string())
-                    ));
+                    board = simulator::board::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
                 }
             },
             "go" => {
@@ -114,42 +109,37 @@ fn perft(depth: usize) {
     
     let mut board = simulator::board::Board::default();
 
-    for n in 1..depth {
+    for n in 1..=depth {
         println!("{}: {}", n, simulator::eval::get_num_moves(&mut board, n));
     }
 
 }
 
 fn internal_sim() {
-
-    let stdin = stdin();
-    let mut line = String::new();
     
     let mut board = simulator::board::Board::default();
 
-    let mut p1: Box<dyn player::Player>;
-    let mut p2: Box<dyn player::Player>;
+    let mut p1: Box<dyn player::player::Player>;
+    let mut p2: Box<dyn player::player::Player>;
 
     println!("enter p1 ('h' -> human, 'r' -> random): ");
 
-    line = String::new();
-    stdin.read_line(&mut line);
+    let mut line = get_line();
 
     p1 = match line.trim() {
-        "h" => Box::new(player::HumanPlayer{}),
-        "r" => Box::new(player::RandomPlayer{}),
-        _ => Box::new(player::BasicSearchPlayer::new(4))
+        "h" => Box::new(player::humanplayer::HumanPlayer{}),
+        "r" => Box::new(player::randomplayer::RandomPlayer{}),
+        _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
     };
 
     println!("enter p2 ('h' -> human, 'r' -> random): ");
 
-    line = String::new();
-    stdin.read_line(&mut line);
+    line = get_line();
 
     p2 = match line.trim() {
-        "h" => Box::new(player::HumanPlayer{}),
-        "r" => Box::new(player::RandomPlayer{}),
-        _ => Box::new(player::BasicSearchPlayer::new(4))
+        "h" => Box::new(player::humanplayer::HumanPlayer{}),
+        "r" => Box::new(player::randomplayer::RandomPlayer{}),
+        _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
     };
 
     loop {
@@ -161,8 +151,7 @@ fn internal_sim() {
             println!("")
         }
         
-        line = String::new();
-        stdin.read_line(&mut line);        
+        line = get_line();     
 
         if line.trim() == "undo" {
             board.undo_move();

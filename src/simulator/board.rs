@@ -177,14 +177,27 @@ impl Board {
             fen += "q";
         }
 
-        return fen + " - 0 1"; // very not correct
+        fen += " ";
+
+        fen += match self.en_passant_chance {
+            Some(square) => (8 - Board::pos_to_row_col(square).0).to_string(),
+            None => String::from("-")
+        }.as_str();
+
+        fen += " 0 ";
+
+        return fen + self.turns_taken.to_string().as_str(); // implement 50 turn rule someday
 
     }
 
     pub fn make_move(&mut self, move_to_make: &Move) {
 
-        if move_to_make.replaced_piece != EMPTY {
-            self.board[move_to_make.end_square] = EMPTY;
+        if move_to_make.replaced_piece == EMPTY {
+            self.board.swap(move_to_make.start_square, move_to_make.end_square);
+
+        } else {
+            self.board[move_to_make.end_square] = move_to_make.moved_piece;
+            self.board[move_to_make.start_square] = EMPTY;
         }
 
         match move_to_make.moved_piece {
@@ -192,8 +205,6 @@ impl Board {
             BLACK_KING => {self.black_king = move_to_make.end_square},
             _ => {}
         }
-
-        self.board.swap(move_to_make.start_square, move_to_make.end_square);
 
         match (move_to_make.is_en_passant, move_to_make.is_castle, move_to_make.moved_piece.get_colour()) {
             (false, false, _) => {},
@@ -205,22 +216,18 @@ impl Board {
             },
             (false, true, Colour::White) => {
                 if move_to_make.end_square == 112 {
-                    self.board[110] = EMPTY;
-                    self.board[113] = WHITE_ROOK;
+                    self.board.swap(110, 113);
                 } else {
-                    self.board[117] = EMPTY;
-                    self.board[115] = WHITE_ROOK;
+                    self.board.swap(115, 117);
                 }
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
             },
             (false, true, Colour::Black) => {
                 if move_to_make.end_square == 28 {
-                    self.board[26] = EMPTY;
-                    self.board[29] = BLACK_ROOK;
+                    self.board.swap(26, 29);
                 } else {
-                    self.board[33] = EMPTY;
-                    self.board[31] = BLACK_ROOK;
+                    self.board.swap(31, 33);
                 }
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
@@ -275,13 +282,22 @@ impl Board {
 
     pub fn undo_move(&mut self) {
 
-        let move_to_undo = self.previous_moves.pop().unwrap();
+        let move_to_undo: Move;
 
-        if move_to_undo.replaced_piece != EMPTY {
-            self.board[move_to_undo.start_square] = move_to_undo.replaced_piece;
+        match self.previous_moves.pop() {
+            Some(last_move) => {
+                move_to_undo = last_move;
+            },
+            None => return
         }
 
-        self.board.swap(move_to_undo.start_square, move_to_undo.end_square);
+        if move_to_undo.replaced_piece == EMPTY {
+            self.board.swap(move_to_undo.start_square, move_to_undo.end_square);
+
+        } else {
+            self.board[move_to_undo.start_square] = move_to_undo.moved_piece;
+            self.board[move_to_undo.end_square] = move_to_undo.replaced_piece;
+        }
 
         match move_to_undo.moved_piece {
             Piece::Pawn{colour} => {
@@ -306,22 +322,11 @@ impl Board {
             (true, false, Colour::Black) => {
                 self.board[move_to_undo.end_square - 12] = WHITE_PAWN;
             },
-            (false, true, Colour::White) => {
-                if move_to_undo.end_square == 112 {
-                    self.board[110] = WHITE_ROOK;
-                    self.board[113] = EMPTY;
+            (false, true, _) => {
+                if move_to_undo.end_square % 12 < 6 { // slightly compressed to remove branch, might cause bugs
+                    self.board.swap(move_to_undo.end_square - 2, move_to_undo.end_square + 1);
                 } else {
-                    self.board[117] = WHITE_ROOK;
-                    self.board[115] = EMPTY;
-                }
-            }
-            (false, true, Colour::Black) => {
-                if move_to_undo.end_square == 28 {
-                    self.board[26] = BLACK_ROOK;
-                    self.board[29] = EMPTY;
-                } else {
-                    self.board[33] = BLACK_ROOK;
-                    self.board[31] = EMPTY;
+                    self.board.swap(move_to_undo.end_square - 1, move_to_undo.end_square + 1);
                 }
             },
             _ => unreachable!()
