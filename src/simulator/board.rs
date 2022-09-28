@@ -200,39 +200,21 @@ impl Board {
             self.board[move_to_make.start_square] = EMPTY;
         }
 
-        match move_to_make.moved_piece {
-            WHITE_KING => {self.white_king = move_to_make.end_square},
-            BLACK_KING => {self.black_king = move_to_make.end_square},
-            _ => {}
-        }
-
-        match (move_to_make.is_en_passant, move_to_make.is_castle, move_to_make.moved_piece.get_colour()) {
-            (false, false, _) => {},
-            (true, false, Colour::White) => {
+        match (move_to_make.move_type, move_to_make.moved_piece.get_colour()) {
+            (SpecialMoveType::Normal, _) => {},
+            (SpecialMoveType::EnPassant, Colour::White) => {
                 self.board[move_to_make.end_square + 12] = EMPTY;
             },
-            (true, false, Colour::Black) => {
+            (SpecialMoveType::EnPassant, Colour::Black) => {
                 self.board[move_to_make.end_square - 12] = EMPTY;
             },
-            (false, true, Colour::White) => {
-                if move_to_make.end_square == 112 {
-                    self.board.swap(110, 113);
+            (SpecialMoveType::Castle, _) => {
+                if move_to_make.end_square % 12 < 6 { // slightly compressed to remove branch, might cause bugs
+                    self.board.swap(move_to_make.end_square - 2, move_to_make.end_square + 1);
                 } else {
-                    self.board.swap(115, 117);
+                    self.board.swap(move_to_make.end_square - 1, move_to_make.end_square + 1);
                 }
-                self.castling_rights.0 = false;
-                self.castling_rights.1 = false;
             },
-            (false, true, Colour::Black) => {
-                if move_to_make.end_square == 28 {
-                    self.board.swap(26, 29);
-                } else {
-                    self.board.swap(31, 33);
-                }
-                self.castling_rights.2 = false;
-                self.castling_rights.3 = false;
-            },
-            _ => unreachable!()
         };
 
         self.en_passant_chance = None;
@@ -254,10 +236,12 @@ impl Board {
             WHITE_KING => {
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
+                self.white_king = move_to_make.end_square;
             },
             BLACK_KING => {
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
+                self.black_king = move_to_make.end_square;
             },
             WHITE_ROOK if move_to_make.start_square == 110 => {
                 self.castling_rights.1 = false;
@@ -314,15 +298,15 @@ impl Board {
             _ => {}
         }
 
-        match (move_to_undo.is_en_passant, move_to_undo.is_castle, move_to_undo.moved_piece.get_colour()) {
-            (false, false, _) => {}
-            (true, false, Colour::White) => {
+        match (move_to_undo.move_type, move_to_undo.moved_piece.get_colour()) {
+            (SpecialMoveType::Normal, _) => {}
+            (SpecialMoveType::EnPassant, Colour::White) => {
                 self.board[move_to_undo.end_square + 12] = BLACK_PAWN;
             },
-            (true, false, Colour::Black) => {
+            (SpecialMoveType::EnPassant, Colour::Black) => {
                 self.board[move_to_undo.end_square - 12] = WHITE_PAWN;
             },
-            (false, true, _) => {
+            (SpecialMoveType::Castle, _) => {
                 if move_to_undo.end_square % 12 < 6 { // slightly compressed to remove branch, might cause bugs
                     self.board.swap(move_to_undo.end_square - 2, move_to_undo.end_square + 1);
                 } else {

@@ -2,6 +2,13 @@ use crate::simulator::piece::*;
 use crate::simulator::board::*;
 use crate::simulator::chess_util::*;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum SpecialMoveType {
+    Normal,
+    EnPassant,
+    Castle
+}
+
 #[derive(Clone, Copy)]
 pub struct Move {
     pub start_square: usize,
@@ -10,8 +17,7 @@ pub struct Move {
     pub replaced_piece: Piece,
     pub old_en_passant_chance: Option<usize>,
     pub old_castling_rights : (bool, bool, bool, bool),
-    pub is_en_passant: bool,
-    pub is_castle: bool
+    pub move_type: SpecialMoveType
 }
 
 impl Move {
@@ -28,13 +34,10 @@ impl Move {
             replaced_piece: replaced_piece,
             old_en_passant_chance: board.en_passant_chance,
             old_castling_rights: board.castling_rights,
-            is_en_passant: match moved_piece {
-                Piece::Pawn{colour: _} => ((start_square as isize - end_square as isize).abs() - 12).abs() == 1 && replaced_piece == EMPTY,
-                _ => false
-            },
-            is_castle: match moved_piece {
-                Piece::King{colour: _} => (start_square as isize - end_square as isize).abs() == 2,
-                _ => false
+            move_type: match moved_piece {
+                Piece::Pawn{colour: _} if ((start_square as isize - end_square as isize).abs() - 12).abs() == 1 && replaced_piece == EMPTY => SpecialMoveType::EnPassant,
+                Piece::King{colour: _} if (start_square as isize - end_square as isize).abs() == 2 => SpecialMoveType::Castle,
+                _ => SpecialMoveType::Normal
             }
         }
     }
@@ -54,7 +57,7 @@ impl Move {
 
         }
 
-        if self.is_castle {
+        if self.move_type == SpecialMoveType::Castle {
             return String::from(match self.end_square {
                 28 => "o-o-o",
                 32 => "o-o",
@@ -74,7 +77,7 @@ impl Move {
             } else {
                 index_to_an(self.start_square)
             },
-            if self.replaced_piece != EMPTY || self.is_en_passant {"x"} else {""},
+            if self.replaced_piece != EMPTY || self.move_type == SpecialMoveType::EnPassant {"x"} else {""},
             index_to_an(self.end_square)
         );
     }
