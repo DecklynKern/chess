@@ -1,17 +1,17 @@
 pub fn long_an_to_index(long_an: String) -> usize {
 
     let mut chars = long_an.chars();
-    2 + match chars.next().unwrap() {
-        'a' => 0,
-        'b' => 1,
-        'c' => 2,
-        'd' => 3,
-        'e' => 4,
-        'f' => 5,
-        'g' => 6,
-        'h' => 7,
+    (match chars.next().unwrap() {
+        'a' => 2,
+        'b' => 3,
+        'c' => 4,
+        'd' => 5,
+        'e' => 6,
+        'f' => 7,
+        'g' => 8,
+        'h' => 9,
         _ => unreachable!()
-    } + 12 * (10 - chars.next().unwrap().to_digit(10).unwrap() as usize)
+    } + 12 * (10 - chars.next().unwrap().to_digit(10).unwrap() as usize))
     
 }
 

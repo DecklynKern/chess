@@ -8,8 +8,7 @@ pub struct RandomPlayer {
 }
 
 impl player::Player for RandomPlayer {
-    fn get_move<'a>(&mut self, _board: &mut board::Board, possible_moves: &'a Vec<eval::Move>) -> &'a eval::Move {
-        let mut rng = thread_rng();
-        return possible_moves.choose(&mut rng).unwrap();
+    fn get_move<'a>(&mut self, _board: &mut board::Board, possible_moves: &'a Vec<eval::Move>) -> Option<&'a eval::Move> {
+        possible_moves.choose(&mut thread_rng())
     }
 }

@@ -1,5 +1,11 @@
+#![allow(non_upper_case_globals)]
 use crate::simulator::piece::*;
 use crate::simulator::eval::*;
+use array_init;
+
+use super::chess_util;
+use super::chess_util::index_to_long_an;
+use super::chess_util::long_an_to_index;
 
 pub const VALID_SQUARES: [usize; 64] = [
      26,  27,  28,  29,  30,  31,  32,  33, 
@@ -12,6 +18,18 @@ pub const VALID_SQUARES: [usize; 64] = [
     110, 111, 112, 113, 114, 115, 116, 117
 ];
 
+fn replace_vec<T>(vec: &mut Vec<T>, val: T, new_val: T)
+where T: PartialEq {
+    let idx = vec.iter().position(|x| *x == val).unwrap();
+    vec[idx] = new_val;
+}
+
+fn del_vec<T>(vec: &mut Vec<T>, val: T)
+where T: PartialEq {
+    let idx = vec.iter().position(|x| *x == val).unwrap();
+    vec.remove(idx);
+}
+
 pub struct Board {
     board: [Piece; 144],
     pub side_to_move: Colour,
@@ -19,6 +37,7 @@ pub struct Board {
     pub previous_moves: Vec<Move>,
     pub en_passant_chance: Option<usize>,
     pub castling_rights: (bool, bool, bool, bool),
+    pub piece_positions: [Vec<usize>; 16],
     pub white_king: usize,
     pub black_king: usize,
 }
@@ -44,12 +63,14 @@ impl Board {
     pub fn from_fen(f: String) -> Board {
 
         let mut chars = f.chars(); 
-        let mut setup_board = [BORDER; 144];
+        let mut setup_board = [Border; 144];
         
         let mut pos = 26;
 
         let mut white_king = 0;
         let mut black_king = 0;
+
+        let mut piece_positions = array_init::array_init(|_| Vec::new());
 
         while pos < 118 {
 
@@ -62,16 +83,18 @@ impl Board {
                 setup_board[pos] = piece;
 
                 match piece {
-                    WHITE_KING => {white_king = pos},
-                    BLACK_KING => {black_king = pos},
+                    WhiteKing => white_king = pos,
+                    BlackKing => black_king = pos,
                     _ => {}
-                }
+                };
+
+                piece_positions[piece as usize].push(pos);
 
                 pos += 1;
 
             } else if c.is_numeric() {
                 for _ in 0..c.to_digit(10).unwrap() as usize {
-                    setup_board[pos] = EMPTY;
+                    setup_board[pos] = Empty;
                     pos += 1;
                 }
             
@@ -79,7 +102,6 @@ impl Board {
                 assert_eq!(c, '/');
                 pos += 4;
             }
-
         }
 
         chars.next();
@@ -102,13 +124,25 @@ impl Board {
             }
         }
 
+        let c = chars.next().unwrap();
+
+        let en_passant_chance = if c != '-' {
+            let mut index = String::new();
+            index.push(c);
+            index.push(chars.next().unwrap());
+            Some(long_an_to_index(index))
+        } else {
+            None
+        };
+
         Board {
             board: setup_board,
             side_to_move: side_to_move,
             turns_taken: 0, //not correct
             previous_moves: Vec::new(),
-            en_passant_chance: None,
+            en_passant_chance: en_passant_chance,
             castling_rights: (white_kingside_castle, white_queenside_castle, black_kingside_castle, black_queenside_castle),
+            piece_positions: piece_positions,
             white_king: white_king,
             black_king: black_king
         }
@@ -130,7 +164,7 @@ impl Board {
                 
                 match self.get_piece(row, col) {
 
-                    EMPTY => {spaces += 1},
+                    Empty => {spaces += 1},
 
                     piece => {
 
@@ -180,7 +214,7 @@ impl Board {
         fen += " ";
 
         fen += match self.en_passant_chance {
-            Some(square) => (8 - Board::pos_to_row_col(square).0).to_string(),
+            Some(square) => index_to_long_an(square),
             None => String::from("-")
         }.as_str();
 
@@ -192,69 +226,72 @@ impl Board {
 
     pub fn make_move(&mut self, move_to_make: &Move) {
 
-        if move_to_make.replaced_piece == EMPTY {
+        if move_to_make.replaced_piece == Empty {
             self.board.swap(move_to_make.start_square, move_to_make.end_square);
 
         } else {
+
             self.board[move_to_make.end_square] = move_to_make.moved_piece;
-            self.board[move_to_make.start_square] = EMPTY;
+            self.board[move_to_make.start_square] = Empty;
+
+            del_vec(&mut self.piece_positions[move_to_make.replaced_piece as usize], move_to_make.end_square);
+
         }
+
+        replace_vec(&mut self.piece_positions[move_to_make.moved_piece as usize], move_to_make.start_square, move_to_make.end_square);
 
         match (move_to_make.move_type, move_to_make.moved_piece.get_colour()) {
             (SpecialMoveType::Normal, _) => {},
-            (SpecialMoveType::EnPassant, Colour::White) => {
-                self.board[move_to_make.end_square + 12] = EMPTY;
+            (SpecialMoveType::EnPassant, White) => {
+                let captured_square = move_to_make.end_square + 12;
+                self.board[captured_square] = Empty;
+                del_vec(&mut self.piece_positions[(BLACK | PAWN) as usize], captured_square);
             },
-            (SpecialMoveType::EnPassant, Colour::Black) => {
-                self.board[move_to_make.end_square - 12] = EMPTY;
+            (SpecialMoveType::EnPassant, Black) => {
+                let captured_square = move_to_make.end_square - 12;
+                self.board[captured_square] = Empty;
+                del_vec(&mut self.piece_positions[(WHITE | PAWN) as usize], captured_square);
             },
             (SpecialMoveType::Castle, _) => {
-                if move_to_make.end_square % 12 < 6 { // slightly compressed to remove branch, might cause bugs
-                    self.board.swap(move_to_make.end_square - 2, move_to_make.end_square + 1);
+                let (rook_start_square, rook_end_square) = if move_to_make.end_square % 12 < 6 {
+                    (move_to_make.end_square - 2, move_to_make.end_square + 1)
                 } else {
-                    self.board.swap(move_to_make.end_square - 1, move_to_make.end_square + 1);
-                }
+                    (move_to_make.end_square + 1, move_to_make.end_square - 1)
+                };
+                replace_vec(&mut self.piece_positions[(self.side_to_move as u8 | ROOK) as usize], rook_start_square, rook_end_square);
+                self.board.swap(rook_start_square, rook_end_square);
             },
         };
 
         self.en_passant_chance = None;
 
         match move_to_make.moved_piece {
-            Piece::Pawn{colour} => {
-                
-                if (move_to_make.start_square as isize - move_to_make.end_square as isize).abs() == 24 {
-                    self.en_passant_chance = Some(move_to_make.end_square);
-                
-                } else if colour == Colour::White && move_to_make.end_square < 36 {
-                    self.board[move_to_make.end_square] = WHITE_QUEEN;
-
-                } else if colour == Colour::Black && move_to_make.end_square > 108 {
-                    self.board[move_to_make.end_square] = BLACK_QUEEN;
-                }   
-
-            },
-            WHITE_KING => {
+            WhitePawn if move_to_make.start_square == move_to_make.end_square + 24 => self.en_passant_chance = Some(move_to_make.end_square + 12),
+            WhitePawn if move_to_make.end_square < 36 => self.board[move_to_make.end_square] = WhiteQueen,
+            BlackPawn if move_to_make.start_square == move_to_make.end_square - 24 => self.en_passant_chance = Some(move_to_make.end_square - 12),
+            BlackPawn if move_to_make.end_square > 108 => self.board[move_to_make.end_square] = BlackQueen,
+            WhiteRook if move_to_make.start_square == 110 => self.castling_rights.1 = false,
+            WhiteRook if move_to_make.start_square == 117 => self.castling_rights.0 = false,
+            BlackRook if move_to_make.start_square == 26 => self.castling_rights.3 = false,
+            BlackRook if move_to_make.start_square == 33 => self.castling_rights.2 = false,
+            WhiteKing => {
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
                 self.white_king = move_to_make.end_square;
             },
-            BLACK_KING => {
+            BlackKing => {
                 self.castling_rights.2 = false;
                 self.castling_rights.3 = false;
                 self.black_king = move_to_make.end_square;
             },
-            WHITE_ROOK if move_to_make.start_square == 110 => {
-                self.castling_rights.1 = false;
-            }
-            WHITE_ROOK if move_to_make.start_square == 117 => {
-                self.castling_rights.0 = false;
-            }
-            BLACK_ROOK if move_to_make.start_square == 26 => {
-                self.castling_rights.3 = false;
-            }
-            BLACK_ROOK if move_to_make.start_square == 33 => {
-                self.castling_rights.2 = false;
-            }
+            _ => {}
+        }
+
+        match (move_to_make.replaced_piece, move_to_make.end_square) {
+            (WhiteRook, 110) => self.castling_rights.1 = false,
+            (WhiteRook, 117) => self.castling_rights.0 = false,
+            (BlackRook, 26) => self.castling_rights.3 = false,
+            (BlackRook, 33) => self.castling_rights.2 = false,
             _ => {}
         }
 
@@ -269,51 +306,53 @@ impl Board {
         let move_to_undo: Move;
 
         match self.previous_moves.pop() {
-            Some(last_move) => {
-                move_to_undo = last_move;
-            },
+            Some(last_move) => move_to_undo = last_move,
             None => return
         }
 
-        if move_to_undo.replaced_piece == EMPTY {
+        if move_to_undo.replaced_piece == Empty {
             self.board.swap(move_to_undo.start_square, move_to_undo.end_square);
 
         } else {
+            
             self.board[move_to_undo.start_square] = move_to_undo.moved_piece;
             self.board[move_to_undo.end_square] = move_to_undo.replaced_piece;
+
+            self.piece_positions[move_to_undo.replaced_piece as usize].push(move_to_undo.end_square);
+
         }
 
+        replace_vec(&mut self.piece_positions[move_to_undo.moved_piece as usize], move_to_undo.end_square, move_to_undo.start_square);
+
         match move_to_undo.moved_piece {
-            Piece::Pawn{colour} => {
-                if colour == Colour::White && move_to_undo.end_square < 36 {
-                    self.board[move_to_undo.start_square] = WHITE_PAWN;
-
-                } else if colour == Colour::Black && move_to_undo.end_square > 108 {
-                    self.board[move_to_undo.start_square] = BLACK_PAWN;
-                }   
-
-            },
-            WHITE_KING => {self.white_king = move_to_undo.start_square},
-            BLACK_KING => {self.black_king = move_to_undo.start_square},
+            WhitePawn if move_to_undo.end_square < 36 => self.board[move_to_undo.start_square] = WhitePawn,
+            BlackPawn if move_to_undo.end_square > 108 => self.board[move_to_undo.start_square] = BlackPawn,
+            WhiteKing => self.white_king = move_to_undo.start_square,
+            BlackKing => self.black_king = move_to_undo.start_square,
             _ => {}
         }
 
         match (move_to_undo.move_type, move_to_undo.moved_piece.get_colour()) {
-            (SpecialMoveType::Normal, _) => {}
-            (SpecialMoveType::EnPassant, Colour::White) => {
-                self.board[move_to_undo.end_square + 12] = BLACK_PAWN;
+            (SpecialMoveType::Normal, _) => {},
+            (SpecialMoveType::EnPassant, White) => {
+                let captured_square = move_to_undo.end_square + 12;
+                self.board[captured_square] = BlackPawn;
+                self.piece_positions[(BLACK | PAWN) as usize].push(captured_square);
             },
-            (SpecialMoveType::EnPassant, Colour::Black) => {
-                self.board[move_to_undo.end_square - 12] = WHITE_PAWN;
+            (SpecialMoveType::EnPassant, Black) => {
+                let captured_square = move_to_undo.end_square - 12;
+                self.board[captured_square] = WhitePawn;
+                self.piece_positions[(WHITE | PAWN) as usize].push(captured_square);
             },
             (SpecialMoveType::Castle, _) => {
-                if move_to_undo.end_square % 12 < 6 { // slightly compressed to remove branch, might cause bugs
-                    self.board.swap(move_to_undo.end_square - 2, move_to_undo.end_square + 1);
+                let (rook_start_square, rook_end_square) = if move_to_undo.end_square % 12 < 6 {
+                    (move_to_undo.end_square - 2, move_to_undo.end_square + 1)
                 } else {
-                    self.board.swap(move_to_undo.end_square - 1, move_to_undo.end_square + 1);
-                }
-            },
-            _ => unreachable!()
+                    (move_to_undo.end_square + 1, move_to_undo.end_square - 1)
+                };
+                replace_vec(&mut self.piece_positions[(self.side_to_move.opposite() as u8 | ROOK) as usize], rook_end_square, rook_start_square);
+                self.board.swap(rook_start_square, rook_end_square);
+            }
         }
 
         self.side_to_move = self.side_to_move.opposite();

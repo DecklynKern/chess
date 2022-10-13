@@ -1,21 +1,21 @@
-use array_init;
-
-const NUM_BITS: usize = 8;
+const NUM_BITS: usize = 16;
 const ARR_SIZE: usize = 2usize.pow(NUM_BITS as u32);
 
 pub struct HashTable<T> {
     mask: u64,
-    table: [Vec<(u64, T)>; ARR_SIZE],
+    table: Vec<Vec<(u64, T)>>,
 }
 
 impl<T> HashTable<T> 
 where T: Copy {
 
     pub fn new() -> HashTable<T> {
-        return HashTable{
+        let mut hashtable = HashTable{
             mask: 0xFFFFFFFFFFFFFFFFu64 >> (64 - NUM_BITS),
-            table: array_init::array_init(|_| Vec::new())
-        }
+            table: Vec::new()
+        };
+        hashtable.clear();
+        hashtable
     }
 
     pub fn get(&self, hash: u64) -> Option<T> {
@@ -41,7 +41,10 @@ where T: Copy {
     }
 
     pub fn clear(&mut self) {
-        self.table = array_init::array_init(|_| Vec::new());
+        self.table.clear();
+        for _ in 0..ARR_SIZE {
+            self.table.push(Vec::new());
+        }
     }
 
 }

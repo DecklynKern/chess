@@ -1,6 +1,8 @@
 mod simulator;
 mod player;
 mod hash;
+use core::num;
+use std::env;
 
 use std::io::stdin;
 use std::fs::OpenOptions;
@@ -44,7 +46,6 @@ fn uci() {
     println!("id name DeckChess");
     println!("id author Deck");
 
-    let mut debug = false;
     let mut board = simulator::board::Board::default();
 
     let mut player: Box<dyn player::player::Player>;
@@ -59,13 +60,6 @@ fn uci() {
         let mut split = line.trim().split(" ");
 
         match split.next().unwrap().trim() {
-            "debug" => {
-                match split.next().unwrap().trim() {
-                    "on" => debug = true,
-                    "off" => debug = false,
-                    _ => {}
-                }
-            },
             "isready" => println!("readyok"),
             "setoption" => {}, // can change
             "register" => {}, // ?
@@ -92,9 +86,16 @@ fn uci() {
             },
             "go" => {
                 let possible_moves = simulator::eval::get_possible_moves(&mut board);
-                let mv = player.get_move(&mut board, &possible_moves).to_long_an();
-                println!("bestmove {}", mv);
-                log(&String::from(format!(">>> bestmove {}\n", mv)));
+                let mv = player.get_move(&mut board, &possible_moves);
+                match mv {
+                    Some(valid_move) => {
+                        let move_text = valid_move.to_long_an();
+                        println!("bestmove {}", move_text);
+                        log(&String::from(format!(">>> bestmove {}\n", move_text)));
+                    },
+                    None => {log(&String::from("### game over"))}
+                }
+                
             },
             "stop" => {}, // cope?
             "ponderhit" => {},
@@ -108,10 +109,19 @@ fn uci() {
 fn perft(depth: usize) {
     
     let mut board = simulator::board::Board::default();
+    //let mut board = simulator::board::Board::from_fen(String::from("rnbqkbnr/1ppp1ppp/p4P2/4p3/8/8/PPPPP1PP/RNBQKBNR b KQkq - 0 1"));
 
-    for n in 1..=depth {
-        println!("{}: {}", n, simulator::eval::get_num_moves(&mut board, n));
+    let mut total_moves: usize = 0;
+    
+    for mv in simulator::eval::get_possible_moves(&board) {
+        board.make_move(&mv);
+        let num_moves = simulator::eval::get_num_moves(&mut board, depth - 1);
+        total_moves += num_moves;
+        println!("{} {}", mv.to_long_an(), num_moves);
+        board.undo_move();
     }
+
+    println!("\nTotal moves: {}", total_moves);
 
 }
 
@@ -122,23 +132,25 @@ fn internal_sim() {
     let mut p1: Box<dyn player::player::Player>;
     let mut p2: Box<dyn player::player::Player>;
 
-    println!("enter p1 ('h' -> human, 'r' -> random): ");
+    println!("enter p1 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
 
     let mut line = get_line();
 
     p1 = match line.trim() {
         "h" => Box::new(player::humanplayer::HumanPlayer{}),
         "r" => Box::new(player::randomplayer::RandomPlayer{}),
+        "b" => Box::new(player::basicsearchplayer::BasicSearchPlayer::new(4)),
         _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
     };
 
-    println!("enter p2 ('h' -> human, 'r' -> random): ");
+    println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
 
     line = get_line();
 
     p2 = match line.trim() {
         "h" => Box::new(player::humanplayer::HumanPlayer{}),
         "r" => Box::new(player::randomplayer::RandomPlayer{}),
+        "b" => Box::new(player::basicsearchplayer::BasicSearchPlayer::new(4)),
         _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
     };
 
@@ -166,13 +178,17 @@ fn internal_sim() {
 
         let move_to_make = if board.side_to_move == simulator::piece::Colour::White {
             p1.get_move(&mut board, &possible_moves)
+
         } else {
             p2.get_move(&mut board, &possible_moves)
         };
 
-        println!("{} is played.\n", move_to_make.to_an(&possible_moves));
-
-        board.make_move(move_to_make);
-
+        match move_to_make {
+            Some(valid_move) => {
+                println!("{} is played.\n", valid_move.to_an(&possible_moves));
+                board.make_move(valid_move);
+            },
+            None => {println!("game over")}
+        }
     }
 }
