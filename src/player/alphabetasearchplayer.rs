@@ -1,22 +1,19 @@
-use crate::player::player;
-use crate::simulator::board;
-use crate::simulator::piece;
-use crate::simulator::eval;
+use crate::player::*;
+use crate::game;
 use crate::hash;
-use crate::simulator::piece::Empty;
 
-fn basic_move_ordering(moves: Vec<eval::Move>) -> Vec<eval::Move> {
+fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 
     let mut sorted_moves = Vec::new();
 
     for possible_move in &moves {
-        if possible_move.replaced_piece != Empty {
+        if possible_move.replaced_piece != game::Empty {
             sorted_moves.push(*possible_move);
         }
     }
 
     for possible_move in &moves {
-        if possible_move.replaced_piece == Empty {
+        if possible_move.replaced_piece == game::Empty {
             sorted_moves.push(*possible_move);
         }
     }
@@ -27,8 +24,8 @@ fn basic_move_ordering(moves: Vec<eval::Move>) -> Vec<eval::Move> {
 
 pub struct AlphaBetaSearchPlayer {
     depth: usize,
-    zobrist_hasher: hash::zobrist::Zobrist,
-    transposition_table: hash::hashtable::HashTable<isize>,
+    zobrist_hasher: hash::Zobrist,
+    transposition_table: hash::HashTable<isize>,
     nodes_searched: usize
 }
 
@@ -37,37 +34,37 @@ impl AlphaBetaSearchPlayer {
     pub fn new(depth: usize) -> AlphaBetaSearchPlayer {
         AlphaBetaSearchPlayer{
             depth: depth,
-            zobrist_hasher: hash::zobrist::Zobrist::new(),
-            transposition_table: hash::hashtable::HashTable::new(),
+            zobrist_hasher: hash::Zobrist::new(),
+            transposition_table: hash::HashTable::new(),
             nodes_searched: 0
         }
     }
 
-    pub fn score_board(board: &board::Board) -> isize {
+    pub fn score_board(board: &game::Board) -> isize {
         let mut sum = 0;
-        for square in board::VALID_SQUARES {
+        for square in game::VALID_SQUARES {
             let piece = board.get_piece_abs(square);
             sum += match piece {
-                piece::WhitePawn => 100,
-                piece::BlackPawn => -100,
-                piece::WhiteKnight => 320,
-                piece::BlackKnight => -320,
-                piece::WhiteBishop => 330,
-                piece::BlackBishop => -330,
-                piece::WhiteRook => 530,
-                piece::BlackRook => -530,
-                piece::WhiteQueen => 960,
-                piece::BlackQueen => -960,
-                piece::WhiteKing => 0,
-                piece::BlackKing => 0,
-                piece::Empty => 0,
-                piece::Border => 0
+                game::WhitePawn => 100,
+                game::BlackPawn => -100,
+                game::WhiteKnight => 320,
+                game::BlackKnight => -320,
+                game::WhiteBishop => 330,
+                game::BlackBishop => -330,
+                game::WhiteRook => 530,
+                game::BlackRook => -530,
+                game::WhiteQueen => 960,
+                game::BlackQueen => -960,
+                game::WhiteKing => 0,
+                game::BlackKing => 0,
+                game::Empty => 0,
+                game::Border => 0
             };
         }
-        return if board.side_to_move == piece::Colour::White {sum} else {-sum};
+        return if board.side_to_move == game::Colour::White {sum} else {-sum};
     }
 
-    fn find_board_score(&mut self, board: &mut board::Board, depth: usize, mut alpha: isize, beta: isize) -> (isize, Option<eval::Move>) {
+    fn find_board_score(&mut self, board: &mut game::Board, depth: usize, mut alpha: isize, beta: isize) -> (isize, Option<game::Move>) {
 
         self.nodes_searched += 1;
 
@@ -80,13 +77,13 @@ impl AlphaBetaSearchPlayer {
             return (score, None);
         }
 
-        score = player::MIN_SCORE;
+        score = MIN_SCORE;
 
-        let possible_moves = eval::get_possible_moves(board);
+        let possible_moves = game::get_possible_moves(board);
 
         if possible_moves.is_empty() {
             
-            if eval::get_king_attackers(board, board.side_to_move).is_empty() {
+            if game::get_king_attackers(board, board.side_to_move).is_empty() {
                 return (0, None);
             }
             
@@ -130,19 +127,19 @@ impl AlphaBetaSearchPlayer {
     }
 }
 
-impl player::Player for AlphaBetaSearchPlayer {
-    fn get_move<'a>(&mut self, board: &mut board::Board, possible_moves: &'a Vec<eval::Move>) -> Option<&'a eval::Move> {
+impl Player for AlphaBetaSearchPlayer {
+    fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a Vec<game::Move>) -> Option<&'a game::Move> {
 
         self.transposition_table.clear();
 
-        let (score, best_move) = self.find_board_score(board, self.depth, player::MIN_SCORE, player::MAX_SCORE);
+        let (_, best_move) = self.find_board_score(board, self.depth, MIN_SCORE, MAX_SCORE);
 
-        println!("nodes searched: {}", self.nodes_searched);
+        // println!("nodes searched: {}", self.nodes_searched);
 
         match best_move {
             Some(valid_move) => {
                 for possible_move in possible_moves {
-                    if possible_move.start_square == valid_move.start_square && possible_move.end_square == possible_move.end_square {
+                    if possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square {
                         return Some(possible_move)
                     }
                 }

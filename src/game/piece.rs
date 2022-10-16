@@ -56,6 +56,13 @@ impl Colour {
         if self == Black {White} else {Black}
     }
 
+    pub fn offset_index(self, index: usize) -> usize {
+        match self {
+            White => index - 12,
+            Black => index + 12 
+        }
+    }
+
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -79,7 +86,6 @@ pub enum Piece {
 impl Piece {
 
     pub fn from_num(num: u8) -> Piece {
-        println!("{}", num);
         match num {
             0b0000 => WhitePawn,
             0b0001 => WhiteKnight,

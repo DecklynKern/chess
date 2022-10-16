@@ -1,13 +1,11 @@
-use crate::player::player;
-use crate::simulator::board;
-use crate::simulator::piece;
-use crate::simulator::eval;
+use crate::player::*;
+use crate::game;
 use crate::hash;
 
 pub struct BasicSearchPlayer {
     depth: usize,
-    zobrist_hasher: hash::zobrist::Zobrist,
-    transposition_table: hash::hashtable::HashTable<isize>,
+    zobrist_hasher: hash::Zobrist,
+    transposition_table: hash::HashTable<isize>,
     nodes_searched: usize
 }
 
@@ -16,37 +14,37 @@ impl BasicSearchPlayer {
     pub fn new(depth: usize) -> BasicSearchPlayer {
         BasicSearchPlayer{
             depth: depth,
-            zobrist_hasher: hash::zobrist::Zobrist::new(),
-            transposition_table: hash::hashtable::HashTable::new(),
+            zobrist_hasher: hash::Zobrist::new(),
+            transposition_table: hash::HashTable::new(),
             nodes_searched: 0
         }
     }
 
-    pub fn score_board(board: &board::Board) -> isize {
+    pub fn score_board(board: &game::Board) -> isize {
         let mut sum = 0;
-        for square in board::VALID_SQUARES {
+        for square in game::VALID_SQUARES {
             let piece = board.get_piece_abs(square);
             sum += match piece {
-                piece::WhitePawn => 100,
-                piece::BlackPawn => -100,
-                piece::WhiteKnight => 300,
-                piece::BlackKnight => -300,
-                piece::WhiteBishop => 300,
-                piece::BlackBishop => -300,
-                piece::WhiteRook => 500,
-                piece::BlackRook => -500,
-                piece::WhiteQueen => 900,
-                piece::BlackQueen => -900,
-                piece::WhiteKing => 0,
-                piece::BlackKing => 0,
-                piece::Empty => 0,
-                piece::Border => 0
+                game::WhitePawn => 100,
+                game::BlackPawn => -100,
+                game::WhiteKnight => 300,
+                game::BlackKnight => -300,
+                game::WhiteBishop => 300,
+                game::BlackBishop => -300,
+                game::WhiteRook => 500,
+                game::BlackRook => -500,
+                game::WhiteQueen => 900,
+                game::BlackQueen => -900,
+                game::WhiteKing => 0,
+                game::BlackKing => 0,
+                game::Empty => 0,
+                game::Border => 0
             };
         }
-        return sum  * (if board.side_to_move == piece::Colour::White {1} else {-1});
+        return sum  * (if board.side_to_move == game::Colour::White {1} else {-1});
     }
 
-    fn find_move_score(&mut self, move_to_check: &eval::Move, board: &mut board::Board, depth: usize) -> isize {
+    fn find_move_score(&mut self, move_to_check: &game::Move, board: &mut game::Board, depth: usize) -> isize {
 
         board.make_move(&move_to_check);
         self.nodes_searched += 1;
@@ -65,11 +63,11 @@ impl BasicSearchPlayer {
                     score = -BasicSearchPlayer::score_board(&board);
                 
                 } else {
-                    score = match eval::get_possible_moves(board).iter().map(|mv|
+                    score = match game::get_possible_moves(board).iter().map(|mv|
                         -self.find_move_score(mv, board, depth - 1)
                     ).min() {
                         Some(val) => val,
-                        None => player::MAX_SCORE
+                        None => MAX_SCORE
                     };
                 }
         
@@ -82,11 +80,11 @@ impl BasicSearchPlayer {
     }
 }
 
-impl player::Player for BasicSearchPlayer {
-    fn get_move<'a>(&mut self, board: &mut board::Board, possible_moves: &'a Vec<eval::Move>) -> Option<&'a eval::Move> {
+impl Player for BasicSearchPlayer {
+    fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a Vec<game::Move>) -> Option<&'a game::Move> {
         
         let mut best_move = None;
-        let mut best_score = player::MIN_SCORE;
+        let mut best_score = MIN_SCORE;
         let mut score: isize;
 
         self.transposition_table.clear();
@@ -101,7 +99,7 @@ impl player::Player for BasicSearchPlayer {
             }
         }
 
-        println!("nodes searched: {}", self.nodes_searched);
+        // println!("nodes searched: {}", self.nodes_searched);
 
         return best_move;
 

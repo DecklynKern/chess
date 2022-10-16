@@ -10,12 +10,14 @@ impl<T> HashTable<T>
 where T: Copy {
 
     pub fn new() -> HashTable<T> {
-        let mut hashtable = HashTable{
-            mask: 0xFFFFFFFFFFFFFFFFu64 >> (64 - NUM_BITS),
-            table: Vec::new()
+        let mut vec = Vec::new();
+        for _ in 0..ARR_SIZE {
+            vec.push(Vec::new());
         };
-        hashtable.clear();
-        hashtable
+        HashTable{
+            mask: 0xFFFFFFFFFFFFFFFFu64 >> (64 - NUM_BITS),
+            table: vec
+        }
     }
 
     pub fn get(&self, hash: u64) -> Option<T> {
@@ -41,9 +43,8 @@ where T: Copy {
     }
 
     pub fn clear(&mut self) {
-        self.table.clear();
-        for _ in 0..ARR_SIZE {
-            self.table.push(Vec::new());
+        for vec in self.table.iter_mut() {
+            vec.clear();
         }
     }
 

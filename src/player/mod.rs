@@ -1,5 +1,18 @@
-pub mod player;
-pub mod humanplayer;
-pub mod randomplayer;
-pub mod basicsearchplayer;
-pub mod alphabetasearchplayer;
+mod humanplayer;
+mod randomplayer;
+mod basicsearchplayer;
+mod alphabetasearchplayer;
+
+pub use humanplayer::*;
+pub use randomplayer::*;
+pub use basicsearchplayer::*;
+pub use alphabetasearchplayer::*;
+
+use crate::game;
+
+pub const MIN_SCORE: isize = isize::MIN + 1;
+pub const MAX_SCORE: isize = isize::MAX;
+
+pub trait Player {
+    fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a Vec<game::Move>) -> Option<&'a game::Move>;
+}

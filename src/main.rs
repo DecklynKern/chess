@@ -1,12 +1,14 @@
-mod simulator;
+mod game;
 mod player;
 mod hash;
-use core::num;
-use std::env;
+
+#[cfg(test)]
+mod test;
 
 use std::io::stdin;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::time;
 
 fn main() {
 
@@ -15,7 +17,7 @@ fn main() {
 
     match split.next().unwrap() {
         "uci" => uci(),
-        "perft" => perft(split.next().unwrap().parse::<usize>().unwrap()),
+        "perft" => perft(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), split.next().unwrap().parse::<usize>().unwrap() as u64),
         _ => internal_sim()
     }
 
@@ -46,10 +48,10 @@ fn uci() {
     println!("id name DeckChess");
     println!("id author Deck");
 
-    let mut board = simulator::board::Board::default();
+    let mut board = game::Board::default();
 
-    let mut player: Box<dyn player::player::Player>;
-    player = Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(6));
+    let mut player: Box<dyn player::Player>;
+    player = Box::new(player::AlphaBetaSearchPlayer::new(1));
 
     loop {
 
@@ -67,25 +69,25 @@ fn uci() {
             "position" => {
                 let arg2 = split.next().unwrap().trim();
                 if arg2 == "startpos" {
-                    board = simulator::board::Board::default();                   
+                    board = game::Board::default();                   
                     match split.next() {
                         Some(arg) => assert_eq!(arg.trim(), "moves"),
                         None => continue
                     }
                     for move_to_play in split {
                         let trimmed = move_to_play.trim();
-                        board.make_move(&simulator::eval::Move::new(
+                        board.make_move(&game::Move::new(
                             &board,
-                            simulator::chess_util::long_an_to_index(String::from(trimmed)),
-                            simulator::chess_util::long_an_to_index(trimmed.to_string()[2..4].to_string())
+                            game::long_an_to_index(String::from(trimmed)),
+                            game::long_an_to_index(trimmed.to_string()[2..4].to_string())
                         ));
                     }
                 } else {
-                    board = simulator::board::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
+                    board = game::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
                 }
             },
             "go" => {
-                let possible_moves = simulator::eval::get_possible_moves(&mut board);
+                let possible_moves = game::get_possible_moves(&mut board);
                 let mv = player.get_move(&mut board, &possible_moves);
                 match mv {
                     Some(valid_move) => {
@@ -106,41 +108,72 @@ fn uci() {
     }
 }
 
-fn perft(depth: usize) {
-    
-    let mut board = simulator::board::Board::default();
-    //let mut board = simulator::board::Board::from_fen(String::from("rnbqkbnr/1ppp1ppp/p4P2/4p3/8/8/PPPPP1PP/RNBQKBNR b KQkq - 0 1"));
+pub fn get_num_moves(board: &mut game::Board, depth: u64) -> u64 {
 
-    let mut total_moves: usize = 0;
+    if depth == 0 {
+        return 1;
+    }
+
+    let possible_moves = game::get_possible_moves(board);
     
-    for mv in simulator::eval::get_possible_moves(&board) {
-        board.make_move(&mv);
-        let num_moves = simulator::eval::get_num_moves(&mut board, depth - 1);
-        total_moves += num_moves;
-        println!("{} {}", mv.to_long_an(), num_moves);
+    if depth == 1 {
+        return possible_moves.len() as u64;
+    }
+
+    let mut moves = 0;
+
+    for possible_move in &possible_moves {
+        board.make_move(&possible_move);
+        moves += get_num_moves(board, depth - 1);
         board.undo_move();
     }
 
-    println!("\nTotal moves: {}", total_moves);
+    return moves;
+
+}
+
+fn perft(fen: String, depth: u64) {
+ 
+    let start_time = time::Instant::now();
+
+    let mut board = game::Board::from_fen(fen);
+
+    let mut total_moves = 0;
+
+    for mv in game::get_possible_moves(&board) {
+        board.make_move(&mv);
+        let next_moves = get_num_moves(&mut board, depth - 1);
+        total_moves += next_moves;
+        println!("{}: {}", mv.to_long_an(), next_moves);
+        board.undo_move();
+    }
+
+    let end_time = time::Instant::now();
+
+    let diff = (end_time - start_time).as_millis() as u64;
+
+    println!();
+    println!("Total time : {}ms", diff);
+    println!("Total moves: {}", total_moves);
 
 }
 
 fn internal_sim() {
     
-    let mut board = simulator::board::Board::default();
+    let mut board = game::Board::default();
 
-    let mut p1: Box<dyn player::player::Player>;
-    let mut p2: Box<dyn player::player::Player>;
+    let mut p1: Box<dyn player::Player>;
+    let mut p2: Box<dyn player::Player>;
 
     println!("enter p1 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
 
     let mut line = get_line();
 
     p1 = match line.trim() {
-        "h" => Box::new(player::humanplayer::HumanPlayer{}),
-        "r" => Box::new(player::randomplayer::RandomPlayer{}),
-        "b" => Box::new(player::basicsearchplayer::BasicSearchPlayer::new(4)),
-        _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
+        "h" => Box::new(player::HumanPlayer{}),
+        "r" => Box::new(player::RandomPlayer{}),
+        "b" => Box::new(player::BasicSearchPlayer::new(4)),
+        _ => Box::new(player::AlphaBetaSearchPlayer::new(4))
     };
 
     println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
@@ -148,10 +181,10 @@ fn internal_sim() {
     line = get_line();
 
     p2 = match line.trim() {
-        "h" => Box::new(player::humanplayer::HumanPlayer{}),
-        "r" => Box::new(player::randomplayer::RandomPlayer{}),
-        "b" => Box::new(player::basicsearchplayer::BasicSearchPlayer::new(4)),
-        _ => Box::new(player::alphabetasearchplayer::AlphaBetaSearchPlayer::new(4))
+        "h" => Box::new(player::HumanPlayer{}),
+        "r" => Box::new(player::RandomPlayer{}),
+        "b" => Box::new(player::BasicSearchPlayer::new(4)),
+        _ => Box::new(player::AlphaBetaSearchPlayer::new(4))
     };
 
     loop {
@@ -170,13 +203,13 @@ fn internal_sim() {
             continue;
         }
 
-        let possible_moves = simulator::eval::get_possible_moves(&mut board);
+        let possible_moves = game::get_possible_moves(&mut board);
 
         if possible_moves.is_empty() {
             break;
         }
 
-        let move_to_make = if board.side_to_move == simulator::piece::Colour::White {
+        let move_to_make = if board.side_to_move == game::Colour::White {
             p1.get_move(&mut board, &possible_moves)
 
         } else {
