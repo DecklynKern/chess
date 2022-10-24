@@ -4,13 +4,6 @@ use super::piece::*;
 use super::board::*;
 use super::r#move::*;
 
-#[derive(PartialEq)]
-enum AddResult {
-    Capture,
-    Move,
-    Fail
-}
-
 const KNIGHT_OFFSETS: [isize; 8] = [-25, -23, -14, -10, 25, 23, 14, 10];
 const KING_OFFSETS: [isize; 8] = [-13, -12, -11, -1, 1, 11, 12, 13];
 const ORTHOGONAL_OFFSETS: [isize; 4] = [-12, -1, 12, 1];
@@ -24,28 +17,26 @@ pub fn is_back_two_ranks(colour: Colour, square: usize) -> bool {
     (colour == White && square >= A2) || (colour == Black && square <= H7)
 }
 
-fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offset: isize) -> AddResult {
+fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offset: isize) -> bool {
 
     let end_square = (start_square as isize + offset) as usize;
     let end_piece = board.get_piece_abs(end_square);
 
     if end_piece == Border {
-        return AddResult::Fail;
+        return false;
     }
 
     let end_piece_empty = end_piece == Empty;
     let same_colour = board.get_piece_abs(start_square).same_colour(end_piece);
 
     if !end_piece_empty && same_colour {
-        return AddResult::Fail;
+        return false;
     }
 
     let new_move = Move::new(&board, start_square, end_square);
-    let result = if new_move.replaced_piece != Empty {AddResult::Capture} else {AddResult::Move};
-
     moves.push(new_move);
 
-    return result;
+    return new_move.replaced_piece == Empty;
 
 }
 
@@ -117,7 +108,7 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
 
             let mut total_offset = offset;
     
-            while try_add_move(moves, board, start_square, total_offset) == AddResult::Move {
+            while try_add_move(moves, board, start_square, total_offset) {
                 total_offset += offset;
             }
         }
@@ -129,7 +120,7 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
 
             let mut total_offset = offset;
     
-            while try_add_move(moves, board, start_square, total_offset) == AddResult::Move {
+            while try_add_move(moves, board, start_square, total_offset) {
                 total_offset += offset;
             }
         }

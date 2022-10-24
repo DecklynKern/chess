@@ -1,9 +1,11 @@
 mod humanplayer;
+#[cfg(feature = "random")]
 mod randomplayer;
 mod basicsearchplayer;
 mod alphabetasearchplayer;
 
 pub use humanplayer::*;
+#[cfg(feature = "random")]
 pub use randomplayer::*;
 pub use basicsearchplayer::*;
 pub use alphabetasearchplayer::*;

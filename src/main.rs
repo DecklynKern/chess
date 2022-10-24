@@ -159,7 +159,8 @@ fn internal_sim() {
 
     p1 = match line.trim() {
         "h" => Box::new(player::HumanPlayer{}),
-        "r" => Box::new(player::RandomPlayer{}),
+        #[cfg(feature = "random")]
+        "r" => {println!("random player");Box::new(player::RandomPlayer{})},
         "b" => Box::new(player::BasicSearchPlayer::new(4)),
         _ => Box::new(player::AlphaBetaSearchPlayer::new(4))
     };
@@ -170,6 +171,7 @@ fn internal_sim() {
 
     p2 = match line.trim() {
         "h" => Box::new(player::HumanPlayer{}),
+        #[cfg(feature = "random")]
         "r" => Box::new(player::RandomPlayer{}),
         "b" => Box::new(player::BasicSearchPlayer::new(4)),
         _ => Box::new(player::AlphaBetaSearchPlayer::new(4))

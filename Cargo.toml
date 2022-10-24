@@ -4,11 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rand = "0.8.5"
 array-init = "2.0.1"
+
+[dependencies.rand]
+version = "0.8.5"
+optional = true
+
+[features]
+default = ["random"]
+random = ["dep:rand"]
 
 [profile.dev]
 opt-level = 1
 
 [profile.release]
 lto = true
+
+[[bin]]
+name = "engine"
+path = "src/main.rs"
