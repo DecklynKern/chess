@@ -5,17 +5,6 @@ use super::chess_util::*;
 
 use array_init;
 
-pub const VALID_SQUARES: [usize; 64] = [
-     26,  27,  28,  29,  30,  31,  32,  33, 
-     38,  39,  40,  41,  42,  43,  44,  45, 
-     50,  51,  52,  53,  54,  55,  56,  57, 
-     62,  63,  64,  65,  66,  67,  68,  69, 
-     74,  75,  76,  77,  78,  79,  80,  81, 
-     86,  87,  88,  89,  90,  91,  92,  93, 
-     98,  99, 100, 101, 102, 103, 104, 105, 
-    110, 111, 112, 113, 114, 115, 116, 117
-];
-
 fn replace_vec<T>(vec: &mut Vec<T>, val: T, new_val: T)
 where T: PartialEq {
     let idx = vec.iter().position(|x| *x == val).unwrap();
@@ -58,19 +47,30 @@ impl Board {
         (pos / 12 - 2, pos % 12 - 2)
     }
 
+    pub fn get_piece_counts(&self, colour: Colour) -> (u64, u64, u64, u64, u64, u64) {
+        (
+            self.piece_positions[(colour as u8 | PAWN) as usize].len() as u64,
+            self.piece_positions[(colour as u8 | KNIGHT) as usize].len() as u64,
+            self.piece_positions[(colour as u8 | BISHOP) as usize].len() as u64,
+            self.piece_positions[(colour as u8 | ROOK) as usize].len() as u64,
+            self.piece_positions[(colour as u8 | QUEEN) as usize].len() as u64,
+            1
+        )
+    }
+
     pub fn from_fen(f: String) -> Board {
 
         let mut chars = f.chars(); 
         let mut setup_board = [Border; 144];
         
-        let mut pos = 26;
+        let mut pos = A8;
 
         let mut white_king = 0;
         let mut black_king = 0;
 
         let mut piece_positions = array_init::array_init(|_| Vec::new());
 
-        while pos < 118 {
+        while pos <= H1 {
 
             let c = chars.next().unwrap();
 
@@ -225,9 +225,7 @@ impl Board {
     pub fn make_move(&mut self, move_to_make: &Move) {
 
         let move_colour = self.side_to_move;
-        let move_colour_u8 = move_colour as u8;
         let opp_colour = move_colour.opposite();
-        let opp_colour_u8 = opp_colour as u8;
 
         if move_to_make.replaced_piece == Empty {
             self.board.swap(move_to_make.start_square, move_to_make.end_square);
@@ -252,11 +250,11 @@ impl Board {
             MoveType::EnPassant => {
                 let captured_square = opp_colour.offset_index(move_to_make.end_square);
                 self.board[captured_square] = Empty;
-                del_vec(&mut self.piece_positions[(opp_colour_u8 | PAWN) as usize], captured_square);
+                del_vec(&mut self.piece_positions[(opp_colour as u8 | PAWN) as usize], captured_square);
             },
             MoveType::Promotion(promote_to) => {
                 self.board[move_to_make.end_square] = promote_to;
-                del_vec(&mut self.piece_positions[(move_colour_u8 | PAWN) as usize], move_to_make.end_square);
+                del_vec(&mut self.piece_positions[(move_colour as u8 | PAWN) as usize], move_to_make.end_square);
                 self.piece_positions[promote_to as usize].push(move_to_make.end_square);
             },
             MoveType::Castle => {
@@ -265,17 +263,17 @@ impl Board {
                 } else {
                     (move_to_make.end_square + 1, move_to_make.end_square - 1)
                 };
-                replace_vec(&mut self.piece_positions[(move_colour_u8 | ROOK) as usize], rook_start_square, rook_end_square);
+                replace_vec(&mut self.piece_positions[(move_colour as u8 | ROOK) as usize], rook_start_square, rook_end_square);
                 self.board.swap(rook_start_square, rook_end_square);
             },
             MoveType::Normal => {}
         };
 
         match move_to_make.moved_piece {
-            WhiteRook if move_to_make.start_square == 110 => self.castling_rights.1 = false,
-            WhiteRook if move_to_make.start_square == 117 => self.castling_rights.0 = false,
-            BlackRook if move_to_make.start_square == 26 => self.castling_rights.3 = false,
-            BlackRook if move_to_make.start_square == 33 => self.castling_rights.2 = false,
+            WhiteRook if move_to_make.start_square == A1 => self.castling_rights.1 = false,
+            WhiteRook if move_to_make.start_square == H1 => self.castling_rights.0 = false,
+            BlackRook if move_to_make.start_square == A8 => self.castling_rights.3 = false,
+            BlackRook if move_to_make.start_square == H8 => self.castling_rights.2 = false,
             WhiteKing => {
                 self.castling_rights.0 = false;
                 self.castling_rights.1 = false;
@@ -289,11 +287,11 @@ impl Board {
             _ => {}
         }
 
-        match (move_to_make.replaced_piece, move_to_make.end_square) {
-            (WhiteRook, 110) => self.castling_rights.1 = false,
-            (WhiteRook, 117) => self.castling_rights.0 = false,
-            (BlackRook, 26) => self.castling_rights.3 = false,
-            (BlackRook, 33) => self.castling_rights.2 = false,
+        match move_to_make.end_square {
+            A1 => self.castling_rights.1 = false,
+            H1 => self.castling_rights.0 = false,
+            A8 => self.castling_rights.3 = false,
+            H8 => self.castling_rights.2 = false,
             _ => {}
         }
 
@@ -306,9 +304,7 @@ impl Board {
     pub fn undo_move(&mut self) {
 
         let opp_colour = self.side_to_move;
-        let opp_colour_u8 = opp_colour as u8;
         let move_colour = opp_colour.opposite();
-        let move_colour_u8 = move_colour as u8;
 
         let move_to_undo = match self.previous_moves.pop() {
             Some(last_move) => last_move,
@@ -327,8 +323,6 @@ impl Board {
 
         }
 
-        replace_vec(&mut self.piece_positions[move_to_undo.moved_piece as usize], move_to_undo.end_square, move_to_undo.start_square);
-
         match move_to_undo.moved_piece {
             WhiteKing => self.white_king = move_to_undo.start_square,
             BlackKing => self.black_king = move_to_undo.start_square,
@@ -346,16 +340,16 @@ impl Board {
         };
 
         match move_to_undo.move_type {
-            MoveType::PawnDouble => {}, // can most likely get rid of previous_en_passant_chance
+            MoveType::PawnDouble => {},
             MoveType::EnPassant => {
                 let captured_square = opp_colour.offset_index(move_to_undo.end_square);
-                self.board[captured_square] = Piece::from_num(opp_colour_u8 | PAWN);
-                self.piece_positions[(opp_colour_u8 | PAWN) as usize].push(captured_square);
+                self.board[captured_square] = Piece::from_num(opp_colour as u8 | PAWN);
+                self.piece_positions[(opp_colour as u8 | PAWN) as usize].push(captured_square);
             },
             MoveType::Promotion(promote_to) => {
-                self.board[move_to_undo.start_square] = Piece::from_num(move_colour_u8 | PAWN);
-                del_vec(&mut self.piece_positions[promote_to as usize], move_to_undo.start_square);
-                self.piece_positions[(move_colour_u8 | PAWN) as usize].push(move_to_undo.start_square);
+                self.board[move_to_undo.start_square] = Piece::from_num(move_colour as u8 | PAWN);
+                self.piece_positions[(move_colour as u8 | PAWN) as usize].push(move_to_undo.end_square);
+                del_vec(&mut self.piece_positions[promote_to as usize], move_to_undo.end_square);
             },
             MoveType::Castle => {
                 let (rook_start_square, rook_end_square) = if move_to_undo.end_square % 12 < 6 {
@@ -363,11 +357,13 @@ impl Board {
                 } else {
                     (move_to_undo.end_square + 1, move_to_undo.end_square - 1)
                 };
-                replace_vec(&mut self.piece_positions[(move_colour_u8 | ROOK) as usize], rook_end_square, rook_start_square);
+                replace_vec(&mut self.piece_positions[(move_colour as u8 | ROOK) as usize], rook_end_square, rook_start_square);
                 self.board.swap(rook_start_square, rook_end_square);
             }
             MoveType::Normal => {}
         }
+
+        replace_vec(&mut self.piece_positions[move_to_undo.moved_piece as usize], move_to_undo.end_square, move_to_undo.start_square);
 
         self.castling_rights = move_to_undo.old_castling_rights;
         self.side_to_move = move_colour;

@@ -20,10 +20,10 @@ impl RNG {
 }
 
 pub struct Zobrist {
-    piece_positions: [[u64; 64]; 16],
+    piece_positions: [[u64; 144]; 16],
     side_to_move_is_black: u64,
     castling_rights: [u64; 16],
-    en_passant_file: [u64; 9]
+    en_passant_file: [u64; 8]
 }
 
 impl Zobrist {
@@ -37,41 +37,41 @@ impl Zobrist {
                 if (arr as usize) != (game::Empty as usize) {array_init::array_init(|_| rng.get_rand())}
                 else {array_init::array_init(|_| 0)}),
             side_to_move_is_black: rng.get_rand(), 
-            castling_rights: ::array_init::array_init(|_| rng.get_rand()),
-            en_passant_file: ::array_init::array_init(|_| rng.get_rand())
+            castling_rights: array_init::array_init(|_| rng.get_rand()),
+            en_passant_file: array_init::array_init(|_| rng.get_rand())
         }
+    }
+
+    fn get_castling_index(castling_rights: (bool, bool, bool, bool)) -> usize {
+        let mut castling_index = 0;
+        castling_index += castling_rights.0 as usize;
+        castling_index <<= 1;
+        castling_index += castling_rights.1 as usize;
+        castling_index <<= 1;
+        castling_index += castling_rights.2 as usize;
+        castling_index <<= 1;
+        castling_index += castling_rights.3 as usize;
+        return castling_index;
     }
 
     pub fn get_board_hash(&self, board: &game::Board) -> u64 {
 
         let mut hash = 0u64;
 
-        let mut idx = 0;
-
-        // pretty hacky but should be fast
         for pos in game::VALID_SQUARES {
-            hash ^= self.piece_positions[board.get_piece_abs(pos) as usize][idx];
-            idx += 1;
+            hash ^= self.piece_positions[board.get_piece_abs(pos) as usize][pos];
         }
 
         if board.side_to_move == game::Black {
             hash ^= self.side_to_move_is_black;
         }
 
-        let mut castling_index = 0usize;
-        castling_index += board.castling_rights.0 as usize;
-        castling_index <<= 1;
-        castling_index += board.castling_rights.1 as usize;
-        castling_index <<= 1;
-        castling_index += board.castling_rights.2 as usize;
-        castling_index <<= 1;
-        castling_index += board.castling_rights.3 as usize;
-        hash ^= self.castling_rights[castling_index];
+        hash ^= self.castling_rights[Zobrist::get_castling_index(board.castling_rights)];
 
-        hash ^= self.en_passant_file[match board.en_passant_chance {
-            Some(square) => square % 12 - 1,
+        hash ^= match board.en_passant_chance {
+            Some(square) => self.en_passant_file[square % 12 - 2],
             None => 0
-        }];
+        };
 
         return hash;
 
@@ -79,9 +79,7 @@ impl Zobrist {
 
     // nuked until i feel like touching this mess again
 
-    /*
-
-    pub fn update_hash(&self, mut hash: u64, move_made: game::Move) -> u64 {
+    pub fn update_hash(&self, mut hash: u64, move_made: &game::Move, old_en_passant_chance: Option<usize>, old_castling_rights: (bool, bool, bool, bool), new_castling_rights: (bool, bool, bool, bool)) -> u64 {
 
         let moved_piece = self.piece_positions[move_made.moved_piece as usize];
 
@@ -92,15 +90,26 @@ impl Zobrist {
             hash ^= self.piece_positions[move_made.replaced_piece as usize][move_made.end_square];
         }
 
-        match (move_made.move_type, move_made.moved_piece.get_colour()) {
-            (game::MoveType::EnPassant, game::White) => {
-                hash ^= self.piece_positions[game::BlackPawn as usize][move_made.end_square + 12];
+        let old_en_passant_hash= match old_en_passant_chance {
+            Some(square) => self.en_passant_file[square % 12 - 2],
+            None => 0
+        };
+        hash ^= old_en_passant_hash;
+
+        match move_made.move_type {
+            game::MoveType::EnPassant => {
+                hash ^= self.piece_positions[game::BlackPawn as usize][move_made.moved_piece.get_colour().opposite().offset_index(move_made.end_square)];
             },
-            (game::MoveType::EnPassant, game::Black) => {
-                hash ^= self.piece_positions[game::WhitePawn as usize][move_made.end_square - 12];
+            game::MoveType::PawnDouble => {
+                hash ^= old_en_passant_hash;
+                hash ^= self.en_passant_file[move_made.end_square % 12 - 2]
             },
-            (game::MoveType::Castle, colour) => {
-                let rook = self.piece_positions[(colour as u8 | game::ROOK) as usize];
+            game::MoveType::Promotion(piece) => {
+                hash ^= moved_piece[move_made.end_square];
+                hash ^= self.piece_positions[piece as usize][move_made.end_square];
+            }
+            game::MoveType::Castle => {
+                let rook = self.piece_positions[(move_made.moved_piece.get_colour() as u8 | game::ROOK) as usize];
                 let (rook_start_square, rook_end_square) = if move_made.end_square % 12 < 6 {
                     (move_made.end_square - 2, move_made.end_square + 1)
                 } else {
@@ -109,74 +118,16 @@ impl Zobrist {
                 hash ^= rook[rook_start_square];
                 hash ^= rook[rook_end_square];
             }
-            (game::MoveType::Normal, _) => {},
+            game::MoveType::Normal => {},
         }
 
-        hash ^= self.en_passant_file[match move_made.old_en_passant_chance {
-            Some(square) => square % 12 - 1,
-            None => 0
-        }];
+        hash ^= self.castling_rights[Zobrist::get_castling_index(old_castling_rights)];
+        hash ^= self.castling_rights[Zobrist::get_castling_index(new_castling_rights)];
 
-        match move_made.moved_piece {
-            game::WhitePawn => {
-                hash ^= self.en_passant_file[if move_made.start_square == move_made.end_square + 24 {
-                    move_made.end_square % 12 - 1
-                } else {
-                    0
-                }];
-                if move_made.end_square < 36 {
-                    hash ^= self.piece_positions[game::WhitePawn as usize][move_made.end_square];
-                    hash ^= self.piece_positions[game::WhiteQueen as usize][move_made.end_square];
-                }
-            },
-            game::BlackPawn => {
-                hash ^= self.en_passant_file[if move_made.start_square == move_made.end_square - 24 {
-                    move_made.end_square % 12 - 1
-                } else {
-                    0
-                }];
-                if move_made.end_square > 108 {
-                    hash ^= self.piece_positions[game::BlackPawn as usize][move_made.end_square];
-                    hash ^= self.piece_positions[game::BlackQueen as usize][move_made.end_square];
-                }
-            },
-            _ => {}
-        }
-
-        // not done
-        // not even sure if this would be any faster with all the branches
-
-        /*
-        match move_to_make.moved_piece {
-            WhiteRook if move_to_make.start_square == 110 => self.castling_rights.1 = false,
-            WhiteRook if move_to_make.start_square == 117 => self.castling_rights.0 = false,
-            BlackRook if move_to_make.start_square == 26 => self.castling_rights.3 = false,
-            BlackRook if move_to_make.start_square == 33 => self.castling_rights.2 = false,
-            WhiteKing => {
-                self.castling_rights.0 = false;
-                self.castling_rights.1 = false;
-                self.white_king = move_to_make.end_square;
-            },
-            BlackKing => {
-                self.castling_rights.2 = false;
-                self.castling_rights.3 = false;
-                self.black_king = move_to_make.end_square;
-            },
-            _ => {}
-        }
-
-        match (move_to_make.replaced_piece, move_to_make.end_square) {
-            (WhiteRook, 110) => self.castling_rights.1 = false,
-            (WhiteRook, 117) => self.castling_rights.0 = false,
-            (BlackRook, 26) => self.castling_rights.3 = false,
-            (BlackRook, 33) => self.castling_rights.2 = false,
-            _ => {}
-        }
-
-        self.side_to_move = self.side_to_move.opposite();*/
+        hash ^= self.side_to_move_is_black;
 
         return hash;
 
-    } */
+    }
 
 }

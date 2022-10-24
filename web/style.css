@@ -1,0 +1,10 @@
+.board-square {
+    width: 60px;
+    height: 60px;
+}
+.rank {
+    display: flex;
+}
+.chess-piece {
+    padding: 0;
+}

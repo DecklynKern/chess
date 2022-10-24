@@ -45,8 +45,8 @@ impl Colour {
         }
     }
 
-    pub fn to_char(&self) -> char {
-        match *self {
+    pub fn to_char(self) -> char {
+        match self {
             White => 'w',
             Black => 'b'
         }
@@ -60,6 +60,13 @@ impl Colour {
         match self {
             White => index - 12,
             Black => index + 12 
+        }
+    }
+
+    pub fn to_dir(self) -> isize {
+        match self {
+            White => -1,
+            Black => 1
         }
     }
 
@@ -105,20 +112,20 @@ impl Piece {
         }
     }
 
-    pub fn get_colour(&self) -> Colour {
-        match (*self as u8) & 0b1000 {
+    pub fn get_colour(self) -> Colour {
+        match (self as u8) & 0b1000 {
             WHITE => White,
             BLACK => Black,
             _ => unreachable!()
         }
     }
 
-    pub fn is_colour(&self, colour: Colour) -> bool {
-        *self as u8 & BLACK == colour as u8
+    pub fn is_colour(self, colour: Colour) -> bool {
+        self as u8 & BLACK == colour as u8
     }
 
-    pub fn same_colour(&self, other: &Piece) -> bool {
-        *self as u8 >> 3 == *other as u8 >> 3
+    pub fn same_colour(self, other: Piece) -> bool {
+        self as u8 >> 3 == other as u8 >> 3
     }
 
     pub fn from_char(c: char) -> Piece {
@@ -141,8 +148,8 @@ impl Piece {
         }
     }
 
-    pub fn to_char(&self) -> char {
-        return match *self {
+    pub fn to_char(self) -> char {
+        return match self {
             WhitePawn=> 'P',
             WhiteKnight => 'N',
             WhiteBishop => 'B',
@@ -160,28 +167,28 @@ impl Piece {
         }
     }
 
-    pub fn is_pawn(&self) -> bool {
-        (*self as u8) & 0b111 == PAWN
+    pub fn is_pawn(self) -> bool {
+        (self as u8) & 0b111 == PAWN
     }
 
-    pub fn is_knight(&self) -> bool {
-        (*self as u8) & 0b111 == KNIGHT
+    pub fn is_knight(self) -> bool {
+        (self as u8) & 0b111 == KNIGHT
     }
 
-    pub fn is_bishop(&self) -> bool {
-        (*self as u8) & 0b111 == BISHOP
+    pub fn is_bishop(self) -> bool {
+        (self as u8) & 0b111 == BISHOP
     }
 
-    pub fn is_rook(&self) -> bool {
-        (*self as u8) & 0b111 == ROOK
+    pub fn is_rook(self) -> bool {
+        (self as u8) & 0b111 == ROOK
     }
 
-    pub fn is_queen(&self) -> bool {
-        (*self as u8) & 0b111 == QUEEN
+    pub fn is_queen(self) -> bool {
+        (self as u8) & 0b111 == QUEEN
     }
 
-    pub fn is_king(&self) -> bool {
-        (*self as u8) & 0b111 == KING
+    pub fn is_king(self) -> bool {
+        (self as u8) & 0b111 == KING
     }
 
 }

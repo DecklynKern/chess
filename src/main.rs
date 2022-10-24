@@ -2,12 +2,7 @@ mod game;
 mod player;
 mod hash;
 
-#[cfg(test)]
-mod test;
-
 use std::io::stdin;
-use std::fs::OpenOptions;
-use std::io::prelude::*;
 use std::time;
 
 fn main() {
@@ -17,11 +12,14 @@ fn main() {
 
     match split.next().unwrap() {
         "uci" => uci(),
-        "perft" => perft(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), split.next().unwrap().parse::<usize>().unwrap() as u64),
+        "perft" => perft(String::from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R3K2R b kq - 1 0"), split.next().unwrap().parse::<usize>().unwrap() as u64),
         _ => internal_sim()
     }
 
 }
+/*
+use std::fs::OpenOptions;
+use std::io::prelude::*;
 
 fn log(string: &String) {
     
@@ -34,7 +32,7 @@ fn log(string: &String) {
     if let Err(e) = write!(file, "{}", string) {
         eprintln!("Couldn't write to file: {}", e);
     }
-}
+}*/
 
 fn get_line() -> String {
     let stdin = stdin();
@@ -51,13 +49,11 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    player = Box::new(player::AlphaBetaSearchPlayer::new(1));
+    player = Box::new(player::AlphaBetaSearchPlayer::new(8));
 
     loop {
 
         let line = get_line();
-        
-        log(&line);
 
         let mut split = line.trim().split(" ");
 
@@ -75,12 +71,30 @@ fn uci() {
                         None => continue
                     }
                     for move_to_play in split {
+
                         let trimmed = move_to_play.trim();
-                        board.make_move(&game::Move::new(
-                            &board,
-                            game::long_an_to_index(String::from(trimmed)),
-                            game::long_an_to_index(trimmed.to_string()[2..4].to_string())
-                        ));
+
+                        let start_square = game::long_an_to_index(String::from(trimmed));
+                        let end_square = game::long_an_to_index(trimmed.to_string()[2..4].to_string());
+                        let diff = start_square.max(end_square) - start_square.min(end_square);
+                        let piece = board.get_piece_abs(start_square);
+
+                        board.make_move(&if piece.is_pawn() && diff == 24 {
+                            if diff == 24 {
+                                game::Move::new_pawn_double(&board, start_square, end_square)
+                            } else if diff != 12 {
+                                game::Move::new_en_passant(&board, start_square, end_square)
+                            } else if end_square < 36 || end_square > 108 {
+                                game::Move::new_promotion(&board, start_square, end_square, game::Piece::from_char(trimmed.to_string().chars().collect::<Vec<char>>()[5]))
+                            } else {
+                                game::Move::new(&board, start_square, end_square) // necessary duplicate to cover all cases
+                            }
+                        } else if piece.is_king() && diff == 2 {
+                            game::Move::new_castle(&board, start_square, end_square)
+                        } else {
+                            game::Move::new(&board, start_square, end_square)
+                        });
+
                     }
                 } else {
                     board = game::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
@@ -93,9 +107,8 @@ fn uci() {
                     Some(valid_move) => {
                         let move_text = valid_move.to_long_an();
                         println!("bestmove {}", move_text);
-                        log(&String::from(format!(">>> bestmove {}\n", move_text)));
                     },
-                    None => {log(&String::from("### game over"))}
+                    None => {}
                 }
                 
             },
@@ -104,32 +117,7 @@ fn uci() {
             "quit" => break,
             _ => {}
         }
-
     }
-}
-
-pub fn get_num_moves(board: &mut game::Board, depth: u64) -> u64 {
-
-    if depth == 0 {
-        return 1;
-    }
-
-    let possible_moves = game::get_possible_moves(board);
-    
-    if depth == 1 {
-        return possible_moves.len() as u64;
-    }
-
-    let mut moves = 0;
-
-    for possible_move in &possible_moves {
-        board.make_move(&possible_move);
-        moves += get_num_moves(board, depth - 1);
-        board.undo_move();
-    }
-
-    return moves;
-
 }
 
 fn perft(fen: String, depth: u64) {
@@ -142,7 +130,7 @@ fn perft(fen: String, depth: u64) {
 
     for mv in game::get_possible_moves(&board) {
         board.make_move(&mv);
-        let next_moves = get_num_moves(&mut board, depth - 1);
+        let next_moves = game::get_num_moves(&mut board, depth - 1);
         total_moves += next_moves;
         println!("{}: {}", mv.to_long_an(), next_moves);
         board.undo_move();

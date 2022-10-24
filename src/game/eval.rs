@@ -1,4 +1,5 @@
 #![allow(non_upper_case_globals)]
+use super::chess_util::*;
 use super::piece::*;
 use super::board::*;
 use super::r#move::*;
@@ -15,6 +16,14 @@ const KING_OFFSETS: [isize; 8] = [-13, -12, -11, -1, 1, 11, 12, 13];
 const ORTHOGONAL_OFFSETS: [isize; 4] = [-12, -1, 12, 1];
 const DIAGONAL_OFFSETS: [isize; 4] = [-13, -11, 13, 11];
 
+pub fn is_back_rank(colour: Colour, square: usize) -> bool {
+    (colour == White && square >= A1) || (colour == Black && square <= H8)
+}
+
+pub fn is_back_two_ranks(colour: Colour, square: usize) -> bool {
+    (colour == White && square >= A2) || (colour == Black && square <= H7)
+}
+
 fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offset: isize) -> AddResult {
 
     let end_square = (start_square as isize + offset) as usize;
@@ -25,7 +34,7 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offse
     }
 
     let end_piece_empty = end_piece == Empty;
-    let same_colour = board.get_piece_abs(start_square).same_colour(&end_piece);
+    let same_colour = board.get_piece_abs(start_square).same_colour(end_piece);
 
     if !end_piece_empty && same_colour {
         return AddResult::Fail;
@@ -57,7 +66,7 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: usize
     let forward_square = colour.offset_index(start_square);
 
     let rank = start_square % 12;
-    let is_promo = (colour == White && start_square < 48) || (colour == Black && start_square > 96);
+    let is_promo = is_back_rank(colour.opposite(), forward_square);
 
     if rank != 2 {
 
@@ -85,7 +94,7 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: usize
 
         let double_move_square = colour.offset_index(forward_square);
 
-        if board.get_piece_abs(double_move_square) == Empty && ((colour == White && start_square > 95) || (colour == Black && start_square < 46)) {
+        if board.get_piece_abs(double_move_square) == Empty && is_back_two_ranks(colour, start_square) {
             moves.push(Move::new_pawn_double(board, start_square, double_move_square));
         }
 
@@ -106,16 +115,10 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
 
         for offset in ORTHOGONAL_OFFSETS {
 
-            let mut total_offset = 0;
+            let mut total_offset = offset;
     
-            loop {
-    
+            while try_add_move(moves, board, start_square, total_offset) == AddResult::Move {
                 total_offset += offset;
-    
-                if try_add_move(moves, board, start_square, total_offset) != AddResult::Move {
-                    break;
-                }
-    
             }
         }
     }
@@ -124,16 +127,10 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
 
         for offset in DIAGONAL_OFFSETS {
 
-            let mut total_offset = 0;
+            let mut total_offset = offset;
     
-            loop {
-    
+            while try_add_move(moves, board, start_square, total_offset) == AddResult::Move {
                 total_offset += offset;
-    
-                if try_add_move(moves, board, start_square, total_offset) != AddResult::Move {
-                    break;
-                }
-    
             }
         }
     }
@@ -165,13 +162,13 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         king_square = board.white_king;
         own_king = WhiteKing;
 
-        if board.castling_rights.1 && board.get_piece_abs(111) == Empty && board.get_piece_abs(112) == Empty &&
-        board.get_piece_abs(113) == Empty && !is_attacking_square(112, board, Black) && !is_attacking_square(113, board, Black) {
-            moves.push(Move::new_castle(&board, king_square, 112));
+        if board.castling_rights.1 && board.get_piece_abs(B1) == Empty && board.get_piece_abs(C1) == Empty &&
+        board.get_piece_abs(D1) == Empty && !is_attacking_square(C1, board, Black) && !is_attacking_square(D1, board, Black) {
+            moves.push(Move::new_castle(&board, king_square, C1));
         }
-        if board.castling_rights.0 && board.get_piece_abs(115) == Empty && board.get_piece_abs(116) == Empty &&
-        !is_attacking_square(115, board, Black) && !is_attacking_square(116, board, Black) {
-            moves.push(Move::new_castle(board, king_square, 116));
+        if board.castling_rights.0 && board.get_piece_abs(F1) == Empty && board.get_piece_abs(G1) == Empty &&
+        !is_attacking_square(F1, board, Black) && !is_attacking_square(G1, board, Black) {
+            moves.push(Move::new_castle(board, king_square, G1));
         }
 
     } else {
@@ -188,13 +185,13 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         king_square = board.black_king;
         own_king = BlackKing;
 
-        if board.castling_rights.3 && board.get_piece_abs(27) == Empty && board.get_piece_abs(28) == Empty &&
-        board.get_piece_abs(29) == Empty && !is_attacking_square(28, board, White) && !is_attacking_square(29, board, White) {
-            moves.push(Move::new_castle(&board, king_square, 28));
+        if board.castling_rights.3 && board.get_piece_abs(B8) == Empty && board.get_piece_abs(C8) == Empty &&
+        board.get_piece_abs(D8) == Empty && !is_attacking_square(C8, board, White) && !is_attacking_square(D8, board, White) {
+            moves.push(Move::new_castle(&board, king_square, C8));
         }
-        if board.castling_rights.2 && board.get_piece_abs(31) == Empty && board.get_piece_abs(32) == Empty &&
-        !is_attacking_square(31, board, White) && !is_attacking_square(32, board, White) {
-            moves.push(Move::new_castle(board, king_square, 32));
+        if board.castling_rights.2 && board.get_piece_abs(F8) == Empty && board.get_piece_abs(G8) == Empty &&
+        !is_attacking_square(F8, board, White) && !is_attacking_square(G8, board, White) {
+            moves.push(Move::new_castle(board, king_square, G8));
         }
 
     }
@@ -312,29 +309,20 @@ pub fn get_king_attackers(board: &Board, colour: Colour) -> Vec<u128> {
     }
 
     // assumes no back rank pawns
-    if colour == White && king_square > 48 {
+    if !is_back_two_ranks(colour.opposite(), king_square as usize) {
 
-        let test_square1 = (king_square - 11) as usize;
-        let test_square2 = (king_square - 13) as usize;
+        let forward = colour.offset_index(king_square as usize);
 
-        if board.get_piece_abs(test_square1) == BlackPawn {
+        let test_square1 = forward - 1;
+        let test_square2 = forward + 1;
+
+        if board.get_piece_abs(test_square1) as u8 == opp_colour | PAWN {
             attackers.push(1 << test_square1);
 
-        } else if board.get_piece_abs(test_square2) == BlackPawn {
+        } else if board.get_piece_abs(test_square2) as u8 == opp_colour | PAWN {
             attackers.push(1 << test_square2);
         }
 
-    } else if colour == Black && king_square < 96 {
-
-        let test_square1 = (king_square + 11) as usize;
-        let test_square2 = (king_square + 13) as usize;
-
-        if board.get_piece_abs(test_square1) == WhitePawn {
-            attackers.push(1 << test_square1);
-
-        } else if board.get_piece_abs(test_square2) == WhitePawn {
-            attackers.push(1 << test_square2);
-        }
     }
 
     let opp_bishop = BISHOP | opp_colour;
@@ -514,31 +502,20 @@ pub fn get_pinned_pieces(board: &Board, colour: Colour) -> Vec<(usize, u128)> {
 pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool {
 
     let sq = square as isize;
+    let opp_colour = colour.opposite();
+
+    let pawn = colour as u8 | PAWN;
+    let backward = opp_colour.offset_index(square);
 
     // println!("pawn");
-    if colour == White {
-
-        if board.get_piece_abs((sq + 11) as usize) == WhitePawn {
-            return true;
-
-        } else if board.get_piece_abs((sq + 13) as usize) == WhitePawn {
-            return true;
-        }
-
-    } else if colour == Black {
-
-        if board.get_piece_abs((sq - 11) as usize) == BlackPawn {
-            return true;
-
-        } else if board.get_piece_abs((sq - 13) as usize) == BlackPawn {
-            return true;
-        }
+    if board.get_piece_abs(backward - 1) as u8 == pawn || 
+        board.get_piece_abs(backward + 1) as u8 == pawn {
+        return true;
     }
 
     // println!("knight");
 
-    let colour_num = colour as u8;
-    let knight = KNIGHT | colour_num;
+    let knight = KNIGHT | colour as u8;
 
     for offset in KNIGHT_OFFSETS {
         if board.get_piece_abs((sq + offset) as usize) as u8 == knight {
@@ -548,8 +525,8 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
     
     // println!("diagonal");
 
-    let bishop = BISHOP | colour_num;
-    let queen = QUEEN | colour_num;
+    let bishop = BISHOP | colour as u8;
+    let queen = QUEEN | colour as u8;
 
     for dir in DIAGONAL_OFFSETS {
         
@@ -576,7 +553,7 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
     
     // println!("orthogonal");
     
-    let rook = ROOK | colour_num;
+    let rook = ROOK | colour as u8;
 
     for dir in ORTHOGONAL_OFFSETS {
         
@@ -603,7 +580,7 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
     
     // println!("king");
     
-    let king = KING | colour_num;
+    let king = KING | colour as u8;
 
     for offset in KING_OFFSETS {
         if board.get_piece_abs((sq + offset) as usize) as u8 == king {
@@ -628,10 +605,7 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
 
         let test_square = (king + offset) as usize;
 
-        if test_square < 26 {
-            continue;
-        }
-        if test_square > 117 {
+        if test_square > H1 {
             break;
         }
 
@@ -642,23 +616,47 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
 
     match colour {
         White => {
-            if board.castling_rights.0 && is_attacking_square(112, board, Black) {
-                attacked_squares |= 1 << 112;
+            if board.castling_rights.0 && is_attacking_square(C1, board, Black) {
+                attacked_squares |= 1 << C1;
             }
-            if board.castling_rights.1 && is_attacking_square(116, board, Black) {
-                attacked_squares |= 1 << 116;
+            if board.castling_rights.1 && is_attacking_square(G1, board, Black) {
+                attacked_squares |= 1 << G1;
             }
         },
         Black => {
-            if board.castling_rights.2 && is_attacking_square(28, board, White) {
-                attacked_squares |= 1 << 28;
+            if board.castling_rights.2 && is_attacking_square(C8, board, White) {
+                attacked_squares |= 1 << C8;
             }
-            if board.castling_rights.3 && is_attacking_square(32, board, White) {
-                attacked_squares |= 1 << 32;
+            if board.castling_rights.3 && is_attacking_square(G8, board, White) {
+                attacked_squares |= 1 << G8;
             }
         }
     }
 
     return attacked_squares;
+
+}
+
+pub fn get_num_moves(board: &mut Board, depth: u64) -> u64 {
+
+    if depth == 0 {
+        return 1;
+    }
+
+    let possible_moves = get_possible_moves(board);
+    
+    if depth == 1 {
+        return possible_moves.len() as u64;
+    }
+
+    let mut moves = 0;
+
+    for possible_move in &possible_moves {
+        board.make_move(&possible_move);
+        moves += get_num_moves(board, depth - 1);
+        board.undo_move();
+    }
+
+    return moves;
 
 }

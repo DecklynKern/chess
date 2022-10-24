@@ -27,12 +27,12 @@ impl Move {
         let moved_piece = board.get_piece_abs(start_square);
         let replaced_piece = board.get_piece_abs(end_square);
         return Move {
-            start_square: start_square,
-            end_square: end_square,
-            moved_piece: moved_piece,
-            replaced_piece: replaced_piece,
+            start_square,
+            end_square,
+            moved_piece,
+            replaced_piece,
             old_castling_rights: board.castling_rights,
-            move_type: move_type
+            move_type
         };
     }
 
@@ -60,7 +60,7 @@ impl Move {
         format!("{}{}", index_to_long_an(self.start_square), index_to_long_an(self.end_square)) + match self.move_type {
             MoveType::Promotion(piece) => {
                 if piece.is_knight() {
-                    "k"
+                    "n"
                 } else if piece.is_bishop() {
                     "b"
                 } else if piece.is_rook() {
@@ -86,10 +86,10 @@ impl Move {
 
         if self.move_type == MoveType::Castle {
             return String::from(match self.end_square {
-                28 => "o-o-o",
-                32 => "o-o",
-                112 => "O-O-O",
-                116 => "O-O",
+                C8 => "o-o-o",
+                G8 => "o-o",
+                C1 => "O-O-O",
+                G1 => "O-O",
                 _ => unreachable!()
             })
         }

@@ -5,7 +5,7 @@ use crate::hash;
 pub struct BasicSearchPlayer {
     depth: usize,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<isize>,
+    transposition_table: hash::HashTable<i64>,
     nodes_searched: usize
 }
 
@@ -20,7 +20,7 @@ impl BasicSearchPlayer {
         }
     }
 
-    pub fn score_board(board: &game::Board) -> isize {
+    pub fn score_board(board: &game::Board) -> i64 {
         let mut sum = 0;
         for square in game::VALID_SQUARES {
             let piece = board.get_piece_abs(square);
@@ -44,7 +44,7 @@ impl BasicSearchPlayer {
         return sum  * (if board.side_to_move == game::Colour::White {1} else {-1});
     }
 
-    fn find_move_score(&mut self, move_to_check: &game::Move, board: &mut game::Board, depth: usize) -> isize {
+    fn find_move_score(&mut self, move_to_check: &game::Move, board: &mut game::Board, depth: usize) -> i64 {
 
         board.make_move(&move_to_check);
         self.nodes_searched += 1;
@@ -57,7 +57,7 @@ impl BasicSearchPlayer {
                 score
             },
             None => {
-                let score: isize;
+                let score: i64;
 
                 if depth == 0 {
                     score = -BasicSearchPlayer::score_board(&board);
@@ -85,7 +85,7 @@ impl Player for BasicSearchPlayer {
         
         let mut best_move = None;
         let mut best_score = MIN_SCORE;
-        let mut score: isize;
+        let mut score: i64;
 
         self.transposition_table.clear();
         
