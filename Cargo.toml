@@ -2,6 +2,9 @@
 name = "chess"
 version = "0.1.0"
 edition = "2021"
+description = "A UCI-compliant chess engine to suck away all my free time."
+license = "MIT"
+repository = "https://github.com/DecklynKern/chess"
 
 [dependencies]
 array-init = "2.0.1"
