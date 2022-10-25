@@ -34,9 +34,10 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offse
     }
 
     let new_move = Move::new(&board, start_square, end_square);
+    let is_empty = new_move.replaced_piece == Empty;
     moves.push(new_move);
 
-    return new_move.replaced_piece == Empty;
+    return is_empty;
 
 }
 

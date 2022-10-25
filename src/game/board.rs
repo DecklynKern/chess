@@ -296,7 +296,7 @@ impl Board {
         }
 
         self.side_to_move = opp_colour;
-        self.previous_moves.push(*move_to_make);
+        self.previous_moves.push(move_to_make.clone());
         self.turns_taken += 1;
 
     }

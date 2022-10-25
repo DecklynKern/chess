@@ -13,7 +13,7 @@ impl BasicSearchPlayer {
 
     pub fn new(depth: usize) -> BasicSearchPlayer {
         BasicSearchPlayer{
-            depth: depth,
+            depth,
             zobrist_hasher: hash::Zobrist::new(),
             transposition_table: hash::HashTable::new(),
             nodes_searched: 0

@@ -42,7 +42,7 @@ impl AlphaBetaSearchPlayer {
 
     pub fn new(depth: u64) -> AlphaBetaSearchPlayer {
         AlphaBetaSearchPlayer{
-            depth: depth,
+            depth,
             zobrist_hasher: hash::Zobrist::new(),
             transposition_table: hash::HashTable::new(),
             nodes_searched: 0

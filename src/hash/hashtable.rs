@@ -10,7 +10,7 @@ impl<T> HashTable<T>
 where T: Copy {
 
     pub fn new() -> HashTable<T> {
-        let mut vec = Vec::new();
+        let mut vec = Vec::with_capacity(ARR_SIZE);
         for _ in 0..ARR_SIZE {
             vec.push(Vec::new());
         };
