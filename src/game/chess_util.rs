@@ -109,7 +109,7 @@ pub fn index_to_long_an(idx: usize) -> String {
         8 => "g",
         9 => "h",
         _ => unreachable!()
-    }, (10 - idx / 12).to_string())
+    }, 10 - idx / 12)
 
 }
 

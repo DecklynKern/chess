@@ -2,28 +2,19 @@ use crate::player::*;
 use crate::game;
 use crate::hash;
 
-const PAWN_VALUE: i64 = 100;
-const KNIGHT_VALUE: i64 = 320;
-const BISHOP_VALUE: i64 = 330;
-const ROOK_VALUE: i64 = 530;
-const QUEEN_VALUE: i64 = 960;
-
-const KING_NEAR_EDGE_VALUE: i64 = 75;
-const KING_NEAR_EDGE_FALLOFF: f64 = 0.6;
-
 fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 
     let mut sorted_moves = Vec::new();
 
     for possible_move in &moves {
         if possible_move.replaced_piece != game::Empty {
-            sorted_moves.push(*possible_move);
+            sorted_moves.push(possible_move.clone());
         }
     }
 
     for possible_move in &moves {
         if possible_move.replaced_piece == game::Empty {
-            sorted_moves.push(*possible_move);
+            sorted_moves.push(possible_move.clone());
         }
     }
 
@@ -33,6 +24,7 @@ fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 
 pub struct AlphaBetaSearchPlayer {
     depth: u64,
+    score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
     transposition_table: hash::HashTable<i64>,
     nodes_searched: u64
@@ -40,40 +32,14 @@ pub struct AlphaBetaSearchPlayer {
 
 impl AlphaBetaSearchPlayer {
 
-    pub fn new(depth: u64) -> AlphaBetaSearchPlayer {
+    pub fn new(depth: u64, score_board: BoardScore) -> AlphaBetaSearchPlayer {
         AlphaBetaSearchPlayer{
             depth,
+            score_board,
             zobrist_hasher: hash::Zobrist::new(),
             transposition_table: hash::HashTable::new(),
             nodes_searched: 0
         }
-    }
-
-    pub fn score_board(board: &game::Board) -> i64 {
-
-        let mut score = 0;
-
-        let white_pieces = board.get_piece_counts(game::White);
-        let black_pieces = board.get_piece_counts(game::Black);
-
-        score += PAWN_VALUE * (white_pieces.0 as i64 - black_pieces.0 as i64);
-        score += KNIGHT_VALUE * (white_pieces.1 as i64 - black_pieces.1 as i64);
-        score += BISHOP_VALUE * (white_pieces.2 as i64 - black_pieces.2 as i64);
-        score += ROOK_VALUE * (white_pieces.3 as i64 - black_pieces.3 as i64);
-        score += QUEEN_VALUE * (white_pieces.4 as i64 - black_pieces.4 as i64);
-
-        score *= -board.side_to_move.to_dir() as i64;
-
-        /*
-        let (opp_king_rank, opp_king_file) = game::Board::pos_to_row_col(match board.side_to_move {
-            game::Colour::White => board.black_king,
-            game::Colour::Black => board.white_king
-        });
-
-        let king_dist_to_corner = (4 - opp_king_rank as isize) + (4 - opp_king_file as isize);*/
-
-        return score;
-
     }
 
     fn find_board_score(&mut self, board: &mut game::Board, depth: u64, mut alpha: i64, beta: i64, board_hash: u64) -> (i64, Option<game::Move>) {
@@ -83,7 +49,7 @@ impl AlphaBetaSearchPlayer {
         let mut score: i64;
 
         if depth == 0 {
-            score = AlphaBetaSearchPlayer::score_board(&board);
+            score = (self.score_board)(board);
             self.transposition_table.set(board_hash, score);
             return (score, None);
         }
@@ -148,7 +114,7 @@ impl AlphaBetaSearchPlayer {
 }
 
 impl Player for AlphaBetaSearchPlayer {
-    fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a Vec<game::Move>) -> Option<&'a game::Move> {
+    fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
 
         self.transposition_table.clear();
 

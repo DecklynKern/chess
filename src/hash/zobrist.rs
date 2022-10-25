@@ -1,6 +1,5 @@
 use crate::game;
 use std::num::Wrapping;
-use array_init;
 
 struct RNG {
     seed: Wrapping<i128>,

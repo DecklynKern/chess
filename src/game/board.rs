@@ -3,9 +3,7 @@ use super::piece::*;
 use super::r#move::*;
 use super::chess_util::*;
 
-use array_init;
-
-fn replace_vec<T>(vec: &mut Vec<T>, val: T, new_val: T)
+fn replace_vec<T>(vec: &mut [T], val: T, new_val: T)
 where T: PartialEq {
     let idx = vec.iter().position(|x| *x == val).unwrap();
     vec[idx] = new_val;
@@ -135,14 +133,14 @@ impl Board {
 
         Board {
             board: setup_board,
-            side_to_move: side_to_move,
+            side_to_move,
             turns_taken: 0, //not correct
             previous_moves: Vec::new(),
-            en_passant_chance: en_passant_chance,
+            en_passant_chance,
             castling_rights: (white_kingside_castle, white_queenside_castle, black_kingside_castle, black_queenside_castle),
-            piece_positions: piece_positions,
-            white_king: white_king,
-            black_king: black_king
+            piece_positions,
+            white_king,
+            black_king
         }
     }
 

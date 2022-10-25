@@ -11,7 +11,7 @@ pub enum MoveType {
     Castle
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Move {
     pub start_square: usize,
     pub end_square: usize,
@@ -73,7 +73,7 @@ impl Move {
         }
     }
 
-    pub fn to_an(&self, possible_moves: &Vec<Move>) -> String {
+    pub fn to_an(&self, possible_moves: &[Move]) -> String {
 
         let mut same_dest_moves: Vec<&Move> = Vec::new();
 

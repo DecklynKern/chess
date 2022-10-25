@@ -1,3 +1,4 @@
+#![allow(clippy::needless_return)]
 mod game;
 mod player;
 mod hash;
@@ -8,31 +9,14 @@ use std::time;
 fn main() {
 
     let line = get_line();
-    let mut split = line.trim().split(" ");
+    let mut split = line.trim().split(' ');
 
     match split.next().unwrap() {
         "uci" => uci(),
         "perft" => perft(String::from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R3K2R b kq - 1 0"), split.next().unwrap().parse::<usize>().unwrap() as u64),
         _ => internal_sim()
     }
-
 }
-/*
-use std::fs::OpenOptions;
-use std::io::prelude::*;
-
-fn log(string: &String) {
-    
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("C:\\Users\\deckl\\OneDrive\\Desktop\\rust\\chess\\log.txt")
-        .unwrap();
-
-    if let Err(e) = write!(file, "{}", string) {
-        eprintln!("Couldn't write to file: {}", e);
-    }
-}*/
 
 fn get_line() -> String {
     let stdin = stdin();
@@ -49,19 +33,19 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    player = Box::new(player::AlphaBetaSearchPlayer::new(8));
+    player = Box::new(player::AlphaBetaSearchPlayer::new(8, &player::advanced_eval));
 
     loop {
 
         let line = get_line();
 
-        let mut split = line.trim().split(" ");
+        let mut split = line.trim().split(' ');
 
         match split.next().unwrap().trim() {
             "isready" => println!("readyok"),
             "setoption" => {}, // can change
             "register" => {}, // ?
-            "ucinewgame" => {}, //shrug
+            "ucinewgame" => {}, //?
             "position" => {
                 let arg2 = split.next().unwrap().trim();
                 if arg2 == "startpos" {
@@ -79,40 +63,38 @@ fn uci() {
                         let diff = start_square.max(end_square) - start_square.min(end_square);
                         let piece = board.get_piece_abs(start_square);
 
+                        // remove magic numbers potentially
                         board.make_move(&if piece.is_pawn() && diff == 24 {
                             if diff == 24 {
                                 game::Move::new_pawn_double(&board, start_square, end_square)
                             } else if diff != 12 {
                                 game::Move::new_en_passant(&board, start_square, end_square)
-                            } else if end_square < 36 || end_square > 108 {
+                            } else if !(36..=108).contains(&end_square) { // weirdest linting suggestion i've ever seen
                                 game::Move::new_promotion(&board, start_square, end_square, game::Piece::from_char(trimmed.to_string().chars().collect::<Vec<char>>()[5]))
                             } else {
                                 game::Move::new(&board, start_square, end_square) // necessary duplicate to cover all cases
                             }
+
                         } else if piece.is_king() && diff == 2 {
                             game::Move::new_castle(&board, start_square, end_square)
+
                         } else {
                             game::Move::new(&board, start_square, end_square)
                         });
-
                     }
+
                 } else {
                     board = game::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
                 }
             },
             "go" => {
-                let possible_moves = game::get_possible_moves(&mut board);
-                let mv = player.get_move(&mut board, &possible_moves);
-                match mv {
-                    Some(valid_move) => {
-                        let move_text = valid_move.to_long_an();
-                        println!("bestmove {}", move_text);
-                    },
-                    None => {}
+                let possible_moves = game::get_possible_moves(&board);
+                if let Some(valid_move) = player.get_move(&mut board, &possible_moves) {
+                    let move_text = valid_move.to_long_an();
+                    println!("bestmove {}", move_text);
                 }
-                
             },
-            "stop" => {}, // cope?
+            "stop" => {}, // ?
             "ponderhit" => {},
             "quit" => break,
             _ => {}
@@ -161,8 +143,8 @@ fn internal_sim() {
         "h" => Box::new(player::HumanPlayer{}),
         #[cfg(feature = "random")]
         "r" => {println!("random player");Box::new(player::RandomPlayer{})},
-        "b" => Box::new(player::BasicSearchPlayer::new(4)),
-        _ => Box::new(player::AlphaBetaSearchPlayer::new(4))
+        "b" => Box::new(player::MiniMaxSearchPlayer::new(4, &player::basic_eval)),
+        _ => Box::new(player::AlphaBetaSearchPlayer::new(4, &player::advanced_eval))
     };
 
     println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
@@ -173,8 +155,8 @@ fn internal_sim() {
         "h" => Box::new(player::HumanPlayer{}),
         #[cfg(feature = "random")]
         "r" => Box::new(player::RandomPlayer{}),
-        "b" => Box::new(player::BasicSearchPlayer::new(4)),
-        _ => Box::new(player::AlphaBetaSearchPlayer::new(4))
+        "b" => Box::new(player::MiniMaxSearchPlayer::new(4, &player::basic_eval)),
+        _ => Box::new(player::AlphaBetaSearchPlayer::new(4, &player::advanced_eval))
     };
 
     loop {
@@ -183,7 +165,7 @@ fn internal_sim() {
             for col in 0..8 {
                 print!("{} ", board.get_piece(row, col).to_char());
             }
-            println!("")
+            println!()
         }
         
         line = get_line();     
@@ -193,7 +175,7 @@ fn internal_sim() {
             continue;
         }
 
-        let possible_moves = game::get_possible_moves(&mut board);
+        let possible_moves = game::get_possible_moves(&board);
 
         if possible_moves.is_empty() {
             break;

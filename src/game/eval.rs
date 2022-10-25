@@ -33,7 +33,7 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offse
         return false;
     }
 
-    let new_move = Move::new(&board, start_square, end_square);
+    let new_move = Move::new(board, start_square, end_square);
     let is_empty = new_move.replaced_piece == Empty;
     moves.push(new_move);
 
@@ -92,11 +92,10 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: usize
 
     }
 
-    match board.en_passant_chance {
-        Some(en_passant_square) => if (en_passant_square as isize - colour.offset_index(start_square) as isize).abs() == 1 {
-            moves.push(Move::new_en_passant(&board, start_square, en_passant_square))
-        },
-        None => {}
+    if let Some(en_passant_square) = board.en_passant_chance {
+        if (en_passant_square as isize - colour.offset_index(start_square) as isize).abs() == 1 {
+            moves.push(Move::new_en_passant(board, start_square, en_passant_square))
+        }
     }
 
 }
@@ -156,7 +155,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
         if board.castling_rights.1 && board.get_piece_abs(B1) == Empty && board.get_piece_abs(C1) == Empty &&
         board.get_piece_abs(D1) == Empty && !is_attacking_square(C1, board, Black) && !is_attacking_square(D1, board, Black) {
-            moves.push(Move::new_castle(&board, king_square, C1));
+            moves.push(Move::new_castle(board, king_square, C1));
         }
         if board.castling_rights.0 && board.get_piece_abs(F1) == Empty && board.get_piece_abs(G1) == Empty &&
         !is_attacking_square(F1, board, Black) && !is_attacking_square(G1, board, Black) {
@@ -179,7 +178,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
         if board.castling_rights.3 && board.get_piece_abs(B8) == Empty && board.get_piece_abs(C8) == Empty &&
         board.get_piece_abs(D8) == Empty && !is_attacking_square(C8, board, White) && !is_attacking_square(D8, board, White) {
-            moves.push(Move::new_castle(&board, king_square, C8));
+            moves.push(Move::new_castle(board, king_square, C8));
         }
         if board.castling_rights.2 && board.get_piece_abs(F8) == Empty && board.get_piece_abs(G8) == Empty &&
         !is_attacking_square(F8, board, White) && !is_attacking_square(G8, board, White) {
@@ -212,9 +211,9 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
     let mut legal_moves: Vec<Move> = Vec::new();
 
-    let king_attackers = get_king_attackers(&board, side_to_move);
-    let pinned_pieces = get_pinned_pieces(&board, side_to_move);
-    let attacked_squares = get_attacked_squares_surrounding_king(&board, side_to_move);
+    let king_attackers = get_king_attackers(board, side_to_move);
+    let pinned_pieces = get_pinned_pieces(board, side_to_move);
+    let attacked_squares = get_attacked_squares_surrounding_king(board, side_to_move);
 
     if king_attackers.is_empty() { // can't move king into check or move pinned pieces
 
@@ -644,7 +643,7 @@ pub fn get_num_moves(board: &mut Board, depth: u64) -> u64 {
     let mut moves = 0;
 
     for possible_move in &possible_moves {
-        board.make_move(&possible_move);
+        board.make_move(possible_move);
         moves += get_num_moves(board, depth - 1);
         board.undo_move();
     }

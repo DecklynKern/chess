@@ -6,7 +6,7 @@ pub struct HashTable<T> {
     table: Vec<Vec<(u64, T)>>,
 }
 
-impl<T> HashTable<T> 
+impl<T> HashTable<T>
 where T: Copy {
 
     pub fn new() -> HashTable<T> {
