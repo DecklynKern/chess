@@ -42,10 +42,10 @@ fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: usize, offse
 
 fn add_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: usize, end_square: usize, colour: u8, is_promo: bool) {
     if is_promo {
-        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | KNIGHT)));
-        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | BISHOP)));
-        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | ROOK)));
         moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | QUEEN)));
+        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | ROOK)));
+        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | BISHOP)));
+        moves.push(Move::new_promotion(board, start_square, end_square, Piece::from_num(colour | KNIGHT)));
 
     } else {
         moves.push(Move::new(board, start_square, end_square));
