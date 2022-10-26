@@ -147,43 +147,46 @@ pub fn advanced_eval(board: &game::Board) -> i64 {
 
     let mut score = 0;
 
-    for &piece in &board.piece_positions[(game::WHITE | game::PAWN) as usize] {
+    let white_pieces = board.get_piece_counts(game::White);
+    let black_pieces = board.get_piece_counts(game::Black);
+
+    for &piece in &board.piece_positions[game::WhitePawn as usize] {
         score += PAWN_SQUARE_VALUES[piece];
     }
 
-    for &piece in &board.piece_positions[(game::BLACK | game::PAWN) as usize] {
+    for &piece in &board.piece_positions[game::BlackPawn as usize] {
         score -= PAWN_SQUARE_VALUES[flip(piece)];
     }
 
-    for &piece in &board.piece_positions[(game::WHITE | game::KNIGHT) as usize] {
+    for &piece in &board.piece_positions[game::WhiteKnight as usize] {
         score += KNIGHT_SQUARE_VALUES[piece];
     }
 
-    for &piece in &board.piece_positions[(game::BLACK | game::KNIGHT) as usize] {
+    for &piece in &board.piece_positions[game::BlackKnight as usize] {
         score -= KNIGHT_SQUARE_VALUES[flip(piece)];
     }
 
-    for &piece in &board.piece_positions[(game::WHITE | game::BISHOP) as usize] {
+    for &piece in &board.piece_positions[game::WhiteBishop as usize] {
         score += BISHOP_SQUARE_VALUES[piece];
     }
 
-    for &piece in &board.piece_positions[(game::BLACK | game::BISHOP) as usize] {
+    for &piece in &board.piece_positions[game::BlackBishop as usize] {
         score -= BISHOP_SQUARE_VALUES[flip(piece)];
     }
 
-    for &piece in &board.piece_positions[(game::WHITE | game::ROOK) as usize] {
+    for &piece in &board.piece_positions[game::WhiteRook as usize] {
         score += ROOK_SQUARE_VALUES[piece];
     }
 
-    for &piece in &board.piece_positions[(game::BLACK | game::ROOK) as usize] {
+    for &piece in &board.piece_positions[game::BlackRook as usize] {
         score -= ROOK_SQUARE_VALUES[flip(piece)];
     }
 
-    for &piece in &board.piece_positions[(game::WHITE | game::QUEEN) as usize] {
+    for &piece in &board.piece_positions[game::WhiteQueen as usize] {
         score += QUEEN_SQUARE_VALUES[piece];
     }
 
-    for &piece in &board.piece_positions[(game::BLACK | game::QUEEN) as usize] {
+    for &piece in &board.piece_positions[game::BlackQueen as usize] {
         score -= QUEEN_SQUARE_VALUES[flip(piece)];
     }
 

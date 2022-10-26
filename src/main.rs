@@ -42,6 +42,7 @@ fn uci() {
         let mut split = line.trim().split(' ');
 
         match split.next().unwrap().trim() {
+            "d" => print_board(&board),
             "isready" => println!("readyok"),
             "setoption" => {}, // can change
             "register" => {}, // ?
@@ -131,6 +132,15 @@ fn perft(fen: String, depth: u64) {
 
 }
 
+fn print_board(board: &game::Board) {
+    for row in 0..8 {
+        for col in 0..8 {
+            print!("{} ", board.get_piece(row, col).to_char());
+        }
+        println!()
+    }
+}
+
 fn internal_sim() {
     
     let mut board = game::Board::default();
@@ -164,12 +174,7 @@ fn internal_sim() {
 
     loop {
 
-        for row in 0..8 {
-            for col in 0..8 {
-                print!("{} ", board.get_piece(row, col).to_char());
-            }
-            println!()
-        }
+        print_board(&board);
         
         line = get_line();     
 
