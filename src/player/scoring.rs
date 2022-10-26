@@ -137,7 +137,7 @@ const KING_LATE_SQUARE_VALUES: [i64; 144] = [
 ];
 
 fn flip(piece: usize) -> usize {
-    144 - piece
+    143 - piece
 }
 
 pub fn advanced_eval(board: &game::Board) -> i64 {
