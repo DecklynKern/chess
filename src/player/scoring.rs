@@ -185,13 +185,8 @@ pub fn advanced_eval(board: &game::Board) -> i64 {
     }
 
     // add late game stuff later
-    for &piece in &board.piece_positions[(game::WHITE | game::BISHOP) as usize] {
-        score += KING_EARLY_SQUARE_VALUES[piece];
-    }
-
-    for &piece in &board.piece_positions[(game::BLACK | game::BISHOP) as usize] {
-        score -= KING_EARLY_SQUARE_VALUES[flip(piece)];
-    }
+    score += KING_EARLY_SQUARE_VALUES[board.white_king];
+    score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king)];
 
     score *= -board.side_to_move.to_dir() as i64;
 
