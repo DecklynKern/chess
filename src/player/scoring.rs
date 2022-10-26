@@ -5,6 +5,9 @@ pub type BoardScore = &'static(dyn Fn(&game::Board) -> i64);
 pub const MIN_SCORE: i64 = i64::MIN + 1;
 pub const MAX_SCORE: i64 = i64::MAX;
 
+pub const LOSE_SCORE: i64 = MIN_SCORE + 1;
+pub const WIN_SCORE: i64 = MAX_SCORE - 1;
+
 const PAWN_VALUE: i64 = 100;
 const KNIGHT_VALUE: i64 = 320;
 const BISHOP_VALUE: i64 = 330;
@@ -188,7 +191,7 @@ pub fn advanced_eval(board: &game::Board) -> i64 {
     score += KING_EARLY_SQUARE_VALUES[board.white_king];
     score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king)];
 
-    score *= -board.side_to_move.to_dir() as i64;
+    score *= -(board.side_to_move.to_dir() as i64);
 
     return score;
 

@@ -64,7 +64,7 @@ impl AlphaBetaSearchPlayer {
                 return (0, None);
             }
             
-            return (score, None);
+            return (LOSE_SCORE, None);
 
         }
 
@@ -108,7 +108,7 @@ impl AlphaBetaSearchPlayer {
             }
         }
 
-        return (score, best_move);
+        return (score - 1 * score.signum(), best_move);
 
     }
 }
@@ -120,9 +120,10 @@ impl Player for AlphaBetaSearchPlayer {
 
         let board_hash = self.zobrist_hasher.get_board_hash(board);
 
-        let (_, best_move) = self.find_board_score(board, self.depth, MIN_SCORE, MAX_SCORE, board_hash);
+        let (eval, best_move) = self.find_board_score(board, self.depth, MIN_SCORE, MAX_SCORE, board_hash);
 
         // println!("nodes searched: {}", self.nodes_searched);
+        println!("eval: {}", eval as f64 / 100.0);
 
         match best_move {
             Some(valid_move) => {

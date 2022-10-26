@@ -92,6 +92,9 @@ fn uci() {
                 if let Some(valid_move) = player.get_move(&mut board, &possible_moves) {
                     let move_text = valid_move.to_long_an();
                     println!("bestmove {}", move_text);
+
+                } else {
+                    println!("resign");   
                 }
             },
             "stop" => {}, // ?
