@@ -33,7 +33,7 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    player = Box::new(player::AlphaBetaSearchPlayer::new(8, &player::advanced_eval));
+    player = Box::new(player::AlphaBetaSearchPlayer::new(6, &player::advanced_eval));
 
     loop {
 
