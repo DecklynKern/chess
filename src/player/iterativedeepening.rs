@@ -2,47 +2,29 @@ use crate::player::*;
 use crate::game;
 use crate::hash;
 
-fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
-
-    let mut sorted_moves = Vec::new();
-
-    for possible_move in &moves {
-        if possible_move.replaced_piece != game::Empty {
-            sorted_moves.push(possible_move.clone());
-        }
-    }
-
-    for possible_move in &moves {
-        if possible_move.replaced_piece == game::Empty {
-            sorted_moves.push(possible_move.clone());
-        }
-    }
-
-    return sorted_moves;
-
-}
-
-pub struct AlphaBetaSearchPlayer {
-    depth: u64,
+pub struct IterativeDeepening {
+    max_depth: u64,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
     transposition_table: hash::HashTable<i64>,
+    pv_table: hash::HashTable<game::Move>,
     nodes_searched: u64
 }
 
-impl AlphaBetaSearchPlayer {
+impl IterativeDeepening {
 
-    pub fn new(depth: u64, score_board: BoardScore) -> AlphaBetaSearchPlayer {
-        AlphaBetaSearchPlayer{
-            depth,
+    pub fn new(max_depth: u64, score_board: BoardScore) -> IterativeDeepening {
+        IterativeDeepening{
+            max_depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),
             transposition_table: hash::HashTable::new(),
+            pv_table: hash::HashTable::new(),
             nodes_searched: 0
         }
     }
 
-    fn find_board_score(&mut self, board: &mut game::Board, depth: u64, mut alpha: i64, beta: i64, mut board_hash: u64) -> (i64, Option<game::Move>) {
+    fn find_board_score(&mut self, board: &mut game::Board, depth: u64, mut alpha: i64, beta: i64, board_hash: u64) -> (i64, Option<game::Move>) {
 
         self.nodes_searched += 1;
 
@@ -56,28 +38,42 @@ impl AlphaBetaSearchPlayer {
 
         score = MIN_SCORE;
 
-        let possible_moves = game::get_possible_moves(board);
+        let mut possible_moves = game::get_possible_moves(board);
 
         if possible_moves.is_empty() { // could also hash these i guess
             
             if game::get_king_attackers(board, board.side_to_move).is_empty() {
+                self.transposition_table.set(board_hash, 0);
                 return (0, None);
             }
             
+            self.transposition_table.set(board_hash, LOSE_SCORE);
             return (LOSE_SCORE, None);
 
         }
 
         let mut best_move = None;
 
-        for possible_move in basic_move_ordering(possible_moves) {
+        if let Some(pv_move) = self.pv_table.get(board_hash) {
+
+            let id = pv_move.get_identifier();
+
+            for (idx, possible_move) in possible_moves.iter().enumerate() {
+                if id == possible_move.get_identifier() {
+                    possible_moves.swap(0, idx);
+                    break;
+                }
+            }
+        }
+
+        for possible_move in possible_moves {
 
             let old_en_passant_chance = board.en_passant_chance;
             let old_castling_rights = board.castling_rights;
 
             board.make_move(&possible_move);
 
-            board_hash = self.zobrist_hasher.update_hash(
+            let new_hash = self.zobrist_hasher.update_hash(
                 board_hash,
                 &possible_move,
                 old_en_passant_chance,
@@ -85,8 +81,8 @@ impl AlphaBetaSearchPlayer {
                 board.castling_rights
             );
 
-            let move_score = match self.transposition_table.get(board_hash) {
-                Some(cached_score) => cached_score,
+            let move_score = match self.transposition_table.get(new_hash) {
+                Some(&cached_score) => cached_score,
                 _ => {
                     let move_score = -self.find_board_score(board, depth - 1, -beta, -alpha, board_hash).0;
                     self.transposition_table.set(board_hash, move_score);
@@ -108,23 +104,35 @@ impl AlphaBetaSearchPlayer {
             }
         }
 
+        if let Some(pv_move) = best_move {
+            self.pv_table.set(board_hash, pv_move);
+        }
+
         return (score - 1 * score.signum(), best_move);
 
     }
 }
 
-impl Player for AlphaBetaSearchPlayer {
+impl Player for IterativeDeepening {
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
-
-        self.transposition_table.clear();
+        
         self.nodes_searched = 0;
-
+        self.pv_table.clear();
+        
         let board_hash = self.zobrist_hasher.get_board_hash(board);
 
-        let (eval, best_move) = self.find_board_score(board, self.depth, MIN_SCORE, MAX_SCORE, board_hash);
+        let mut eval = 0;
+        let mut best_move = None;
+
+        for search_depth in 1..self.max_depth {
+
+            self.transposition_table.clear();
+            (eval, best_move) = self.find_board_score(board, search_depth, MIN_SCORE, MAX_SCORE, board_hash);
+
+        }
 
         // println!("nodes searched: {}", self.nodes_searched);
-        println!("eval: {}", eval as f64 / 100.0);
+        // println!("eval: {}", eval as f64 / 100.0);
 
         match best_move {
             Some(valid_move) => {

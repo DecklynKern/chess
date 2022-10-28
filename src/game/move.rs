@@ -11,7 +11,7 @@ pub enum MoveType {
     Castle
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Move {
     pub start_square: usize,
     pub end_square: usize,
@@ -109,4 +109,9 @@ impl Move {
             index_to_an(self.end_square)
         );
     }
+
+    pub fn get_identifier(&self) -> u64 {
+        self.moved_piece as u64 | (self.replaced_piece as u64) << 8 | (self.start_square as u64) << 16 | (self.end_square as u64) << 24
+    }
+
 }

@@ -6,8 +6,7 @@ pub struct HashTable<T> {
     table: Vec<Vec<(u64, T)>>,
 }
 
-impl<T> HashTable<T>
-where T: Copy {
+impl<T> HashTable<T> {
 
     pub fn new() -> HashTable<T> {
         let mut vec = Vec::with_capacity(ARR_SIZE);
@@ -20,7 +19,7 @@ where T: Copy {
         }
     }
 
-    pub fn get(&self, hash: u64) -> Option<T> {
+    pub fn get(&self, hash: u64) -> Option<&T> {
         
         let result = &self.table[(hash & self.mask) as usize];
 
@@ -30,7 +29,7 @@ where T: Copy {
 
         for item in result {
             if item.0 == hash {
-                return Some(item.1);
+                return Some(&item.1);
             }
         }
 

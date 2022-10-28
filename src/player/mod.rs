@@ -1,15 +1,17 @@
 mod humanplayer;
 #[cfg(feature = "random")]
-mod randomplayer;
-mod minimaxsearchplayer;
-mod alphabetasearchplayer;
+mod randommove;
+mod minimax;
+mod alphabeta;
+mod iterativedeepening;
 mod scoring;
 
 pub use humanplayer::*;
 #[cfg(feature = "random")]
-pub use randomplayer::*;
-pub use minimaxsearchplayer::*;
-pub use alphabetasearchplayer::*;
+pub use randommove::*;
+pub use minimax::*;
+pub use alphabeta::*;
+pub use iterativedeepening::*;
 pub use scoring::*;
 
 use crate::game;

@@ -30,7 +30,7 @@ impl MiniMaxSearchPlayer {
         let hash = self.zobrist_hasher.get_board_hash(board);
 
         return match self.transposition_table.get(hash) {
-            Some(score) => {
+            Some(&score) => {
                 board.undo_move();
                 score
             },

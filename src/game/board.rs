@@ -18,7 +18,7 @@ where T: PartialEq {
 pub struct Board {
     board: [Piece; 144],
     pub side_to_move: Colour,
-    pub turns_taken: usize,
+    pub turns_taken: u64,
     pub previous_moves: Vec<Move>,
     pub en_passant_chance: Option<usize>,
     pub castling_rights: (bool, bool, bool, bool),
@@ -127,14 +127,38 @@ impl Board {
             index.push(c);
             index.push(chars.next().unwrap());
             Some(long_an_to_index(index))
+
         } else {
             None
         };
 
+        chars.next();
+
+        let mut fifty_turn_count = "".to_owned();
+
+        while let Some(next) = chars.next() {
+            if next == ' ' {
+                break;
+            }
+            fifty_turn_count += next.to_string().as_str();
+        }
+
+        let mut fullturn_num = "".to_owned();
+
+        while let Some(next) = chars.next() {
+            if next == ' ' {
+                break;
+            }
+            fullturn_num += next.to_string().as_str();
+        }
+
         Board {
             board: setup_board,
             side_to_move,
-            turns_taken: 0, //not correct
+            turns_taken: match fullturn_num.parse::<u64>() {
+                Ok(fullturns) => fullturns * 2 - 2 + if side_to_move == White {0} else {1},
+                Err(_) => 0
+            },
             previous_moves: Vec::new(),
             en_passant_chance,
             castling_rights: (white_kingside_castle, white_queenside_castle, black_kingside_castle, black_queenside_castle),
@@ -216,7 +240,7 @@ impl Board {
 
         fen += " 0 ";
 
-        return fen + self.turns_taken.to_string().as_str(); // implement 50 turn rule someday
+        return fen + (self.turns_taken / 2 + 1).to_string().as_str(); // implement 50 turn rule someday
 
     }
 
