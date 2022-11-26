@@ -2,7 +2,7 @@ use crate::player::*;
 use crate::game;
 use crate::hash;
 
-pub struct MiniMaxSearchPlayer {
+pub struct MiniMaxPlayer {
     depth: usize,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
@@ -10,10 +10,10 @@ pub struct MiniMaxSearchPlayer {
     nodes_searched: usize
 }
 
-impl MiniMaxSearchPlayer {
+impl MiniMaxPlayer {
 
-    pub fn new(depth: usize, score_board: BoardScore) -> MiniMaxSearchPlayer {
-        MiniMaxSearchPlayer{
+    pub fn new(depth: usize, score_board: BoardScore) -> MiniMaxPlayer {
+        MiniMaxPlayer{
             depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),
@@ -58,7 +58,7 @@ impl MiniMaxSearchPlayer {
     }
 }
 
-impl Player for MiniMaxSearchPlayer {
+impl Player for MiniMaxPlayer {
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
         
         let mut best_move = None;

@@ -23,10 +23,6 @@ impl<T> HashTable<T> {
         
         let result = &self.table[(hash & self.mask) as usize];
 
-        if result.is_empty() {
-            return None;
-        }
-
         for item in result {
             if item.0 == hash {
                 return Some(&item.1);

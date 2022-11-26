@@ -1,4 +1,4 @@
-use crate::game;
+use crate::game::{self, CastlingRights};
 use std::num::Wrapping;
 
 struct RNG {
@@ -41,18 +41,6 @@ impl Zobrist {
         }
     }
 
-    fn get_castling_index(castling_rights: (bool, bool, bool, bool)) -> usize {
-        let mut castling_index = 0;
-        castling_index += castling_rights.0 as usize;
-        castling_index <<= 1;
-        castling_index += castling_rights.1 as usize;
-        castling_index <<= 1;
-        castling_index += castling_rights.2 as usize;
-        castling_index <<= 1;
-        castling_index += castling_rights.3 as usize;
-        return castling_index;
-    }
-
     pub fn get_board_hash(&self, board: &game::Board) -> u64 {
 
         let mut hash = 0u64;
@@ -65,7 +53,7 @@ impl Zobrist {
             hash ^= self.side_to_move_is_black;
         }
 
-        hash ^= self.castling_rights[Zobrist::get_castling_index(board.castling_rights)];
+        hash ^= self.castling_rights[board.castling_rights as usize];
 
         hash ^= match board.en_passant_chance {
             Some(square) => self.en_passant_file[square % 12 - 2],
@@ -78,7 +66,7 @@ impl Zobrist {
 
     // nuked until i feel like touching this mess again
 
-    pub fn update_hash(&self, mut hash: u64, move_made: &game::Move, old_en_passant_chance: Option<usize>, old_castling_rights: (bool, bool, bool, bool), new_castling_rights: (bool, bool, bool, bool)) -> u64 {
+    pub fn update_hash(&self, mut hash: u64, move_made: &game::Move, old_en_passant_chance: Option<usize>, old_castling_rights: game::CastlingRights, new_castling_rights: CastlingRights) -> u64 {
 
         let moved_piece = self.piece_positions[move_made.moved_piece as usize];
 
@@ -120,8 +108,8 @@ impl Zobrist {
             game::MoveType::Normal => {},
         }
 
-        hash ^= self.castling_rights[Zobrist::get_castling_index(old_castling_rights)];
-        hash ^= self.castling_rights[Zobrist::get_castling_index(new_castling_rights)];
+        hash ^= self.castling_rights[old_castling_rights as usize];
+        hash ^= self.castling_rights[new_castling_rights as usize];
 
         hash ^= self.side_to_move_is_black;
 

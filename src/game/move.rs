@@ -17,7 +17,7 @@ pub struct Move {
     pub end_square: usize,
     pub moved_piece: Piece,
     pub replaced_piece: Piece,
-    pub old_castling_rights : (bool, bool, bool, bool),
+    pub old_castling_rights : CastlingRights,
     pub move_type: MoveType
 }
 

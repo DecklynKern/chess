@@ -2,6 +2,8 @@ use crate::player::*;
 use crate::game;
 use crate::hash;
 
+use std::time;
+
 pub struct IterativeDeepening {
     max_depth: u64,
     score_board: BoardScore,
@@ -54,17 +56,11 @@ impl IterativeDeepening {
 
         let mut best_move = None;
 
-        if let Some(pv_move) = self.pv_table.get(board_hash) {
+        //let mut pv_id = 0;
 
-            let id = pv_move.get_identifier();
-
-            for (idx, possible_move) in possible_moves.iter().enumerate() {
-                if id == possible_move.get_identifier() {
-                    possible_moves.swap(0, idx);
-                    break;
-                }
-            }
-        }
+        // if let Some(pv_move) = self.pv_table.get(board_hash) {
+        //     possible_moves.insert(0, *pv_move);
+        // }
 
         for possible_move in possible_moves {
 
@@ -121,13 +117,18 @@ impl Player for IterativeDeepening {
         
         let board_hash = self.zobrist_hasher.get_board_hash(board);
 
-        let mut eval = 0;
+        let mut eval;
         let mut best_move = None;
 
-        for search_depth in 1..self.max_depth {
+        for search_depth in 1..=self.max_depth {
 
             self.transposition_table.clear();
+            let start_time = time::Instant::now();
+
             (eval, best_move) = self.find_board_score(board, search_depth, MIN_SCORE, MAX_SCORE, board_hash);
+
+            println!("depth {}: {}ms", search_depth, (time::Instant::now() - start_time).as_millis());
+            println!("best move: {}, eval: {}", best_move.unwrap().to_long_an(), eval);
 
         }
 

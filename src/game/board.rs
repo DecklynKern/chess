@@ -21,7 +21,7 @@ pub struct Board {
     pub turns_taken: u64,
     pub previous_moves: Vec<Move>,
     pub en_passant_chance: Option<usize>,
-    pub castling_rights: (bool, bool, bool, bool),
+    pub castling_rights: CastlingRights,
     pub piece_positions: [Vec<usize>; 16],
     pub white_king: usize,
     pub black_king: usize,
@@ -43,6 +43,10 @@ impl Board {
 
     pub fn pos_to_row_col(pos: usize) -> (usize, usize) {
         (pos / 12 - 2, pos % 12 - 2)
+    }
+
+    pub fn row_col_to_pos(row: usize, col: usize) -> usize {
+        row * 12 + col + 26
     }
 
     pub fn get_piece_counts(&self, colour: Colour) -> (u64, u64, u64, u64, u64, u64) {
@@ -104,17 +108,17 @@ impl Board {
         let side_to_move = Colour::from_char(chars.next().unwrap());
         chars.next();
 
-        let (mut white_queenside_castle, mut white_kingside_castle, mut black_queenside_castle, mut black_kingside_castle) = (false, false, false, false); 
+        let mut castling_rights = NO_CASTLING_RIGHTS;
 
         let mut c;
 
         loop {
             c = chars.next().unwrap();
             match c {
-                'K' => white_kingside_castle = true,
-                'Q' => white_queenside_castle = true,
-                'k' => black_kingside_castle = true,
-                'q' => black_queenside_castle = true,
+                'K' => castling_rights |= WHITE_KINGSIDE,
+                'Q' => castling_rights |= WHITE_QUEENSIDE,
+                'k' => castling_rights |= BLACK_KINGSIDE,
+                'q' => castling_rights |= BLACK_QUEENSIDE,
                 ' ' => break,
                 _ => {}
             }
@@ -161,7 +165,7 @@ impl Board {
             },
             previous_moves: Vec::new(),
             en_passant_chance,
-            castling_rights: (white_kingside_castle, white_queenside_castle, black_kingside_castle, black_queenside_castle),
+            castling_rights,
             piece_positions,
             white_king,
             black_king
@@ -211,23 +215,23 @@ impl Board {
 
         fen += " ";
 
-        if self.castling_rights == (false, false, false, false) {
+        if self.castling_rights == NO_CASTLING_RIGHTS {
             fen += "-";
         }
 
-        if self.castling_rights.0 {
+        if self.castling_rights & WHITE_KINGSIDE != NO_CASTLING_RIGHTS {
             fen += "K";
         }
 
-        if self.castling_rights.1 {
+        if self.castling_rights & WHITE_QUEENSIDE != NO_CASTLING_RIGHTS {
             fen += "Q";
         }
 
-        if self.castling_rights.2 {
+        if self.castling_rights & BLACK_KINGSIDE != NO_CASTLING_RIGHTS {
             fen += "k";
         }
 
-        if self.castling_rights.3 {
+        if self.castling_rights & BLACK_QUEENSIDE != NO_CASTLING_RIGHTS {
             fen += "q";
         }
 
@@ -292,30 +296,28 @@ impl Board {
         };
 
         match move_to_make.moved_piece {
-            WhiteRook if move_to_make.start_square == A1 => self.castling_rights.1 = false,
-            WhiteRook if move_to_make.start_square == H1 => self.castling_rights.0 = false,
-            BlackRook if move_to_make.start_square == A8 => self.castling_rights.3 = false,
-            BlackRook if move_to_make.start_square == H8 => self.castling_rights.2 = false,
+            WhiteRook if move_to_make.start_square == H1 => self.castling_rights &= !WHITE_KINGSIDE,
+            WhiteRook if move_to_make.start_square == A1 => self.castling_rights &= !WHITE_QUEENSIDE,
+            BlackRook if move_to_make.start_square == H8 => self.castling_rights &= !BLACK_KINGSIDE,
+            BlackRook if move_to_make.start_square == A8 => self.castling_rights &= !BLACK_QUEENSIDE,
             WhiteKing => {
-                self.castling_rights.0 = false;
-                self.castling_rights.1 = false;
+                self.castling_rights &= !(WHITE_KINGSIDE | WHITE_QUEENSIDE);
                 self.white_king = move_to_make.end_square;
             },
             BlackKing => {
-                self.castling_rights.2 = false;
-                self.castling_rights.3 = false;
+                self.castling_rights &= !(BLACK_KINGSIDE | BLACK_QUEENSIDE);
                 self.black_king = move_to_make.end_square;
             },
             _ => {}
         }
 
-        match move_to_make.end_square {
-            A1 => self.castling_rights.1 = false,
-            H1 => self.castling_rights.0 = false,
-            A8 => self.castling_rights.3 = false,
-            H8 => self.castling_rights.2 = false,
-            _ => {}
-        }
+        self.castling_rights &= match move_to_make.end_square {
+            H1 => !WHITE_KINGSIDE,
+            A1 => !WHITE_QUEENSIDE,
+            H8 => !BLACK_KINGSIDE,
+            A8 => !BLACK_QUEENSIDE,
+            _ => ALL_CASTLING_RIGHTS
+        };
 
         self.side_to_move = opp_colour;
         self.previous_moves.push(move_to_make.clone());

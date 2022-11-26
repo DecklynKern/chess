@@ -124,7 +124,7 @@ const KING_EARLY_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const KING_LATE_SQUARE_VALUES: [i64; 144] = [
+const KING_LATE_SQUARE_VALUES: [i64; 144] = [ // wrong values lol
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,

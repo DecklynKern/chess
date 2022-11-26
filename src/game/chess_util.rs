@@ -1,3 +1,13 @@
+pub type CastlingRights = u8;
+
+pub const ALL_CASTLING_RIGHTS: CastlingRights = 0b1111;
+pub const NO_CASTLING_RIGHTS: CastlingRights = 0b0000;
+
+pub const WHITE_KINGSIDE: CastlingRights = 0b1000;
+pub const WHITE_QUEENSIDE: CastlingRights = 0b0100;
+pub const BLACK_KINGSIDE: CastlingRights = 0b0010;
+pub const BLACK_QUEENSIDE: CastlingRights = 0b0001;
+
 pub const A8: usize = 26;
 pub const B8: usize = 27;
 pub const C8: usize = 28;

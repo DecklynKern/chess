@@ -35,7 +35,7 @@ fn position_6_2ply() {
 #[test]
 fn capture_queen() {
     let mut board = chess::game::Board::from_fen(String::from("rnb1kbnr/pppppppp/8/8/3Qq3/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1"));
-    let mut alphabeta: Box<dyn chess::player::Player> = Box::new(chess::player::AlphaBetaSearchPlayer::new(6, &chess::player::basic_eval));
+    let mut alphabeta: Box<dyn chess::player::Player> = Box::new(chess::player::AlphaBetaPlayer::new(6, &chess::player::basic_eval));
     let possible_moves = chess::game::get_possible_moves(&board);
     assert_eq!(alphabeta.get_move(&mut board, &possible_moves).unwrap().to_long_an(), "d4e4");
 }

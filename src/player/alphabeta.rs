@@ -22,7 +22,7 @@ fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 
 }
 
-pub struct AlphaBetaSearchPlayer {
+pub struct AlphaBetaPlayer {
     depth: u64,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
@@ -30,10 +30,10 @@ pub struct AlphaBetaSearchPlayer {
     nodes_searched: u64
 }
 
-impl AlphaBetaSearchPlayer {
+impl AlphaBetaPlayer {
 
-    pub fn new(depth: u64, score_board: BoardScore) -> AlphaBetaSearchPlayer {
-        AlphaBetaSearchPlayer{
+    pub fn new(depth: u64, score_board: BoardScore) -> AlphaBetaPlayer {
+        AlphaBetaPlayer{
             depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),
@@ -113,7 +113,7 @@ impl AlphaBetaSearchPlayer {
     }
 }
 
-impl Player for AlphaBetaSearchPlayer {
+impl Player for AlphaBetaPlayer {
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
 
         self.transposition_table.clear();

@@ -13,7 +13,7 @@ fn main() {
 
     match split.next().unwrap() {
         "uci" => uci(),
-        "perft" => perft(String::from("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R3K2R b kq - 1 0"), split.next().unwrap().parse::<usize>().unwrap() as u64),
+        "perft" => perft(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), split.next().unwrap().parse::<usize>().unwrap() as u64),
         _ => internal_sim()
     }
 }
@@ -33,7 +33,8 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    player = Box::new(player::AlphaBetaSearchPlayer::new(6, &player::advanced_eval));
+    player = Box::new(player::AlphaBetaPlayer::new(8, &player::advanced_eval));
+    // player = Box::new(player::IterativeDeepening::new(6, &player::advanced_eval));
 
     loop {
 
@@ -156,8 +157,8 @@ fn internal_sim() {
         "h" => Box::new(player::HumanPlayer{}),
         #[cfg(feature = "random")]
         "r" => {println!("random player");Box::new(player::RandomPlayer{})},
-        "b" => Box::new(player::MiniMaxSearchPlayer::new(4, &player::basic_eval)),
-        _ => Box::new(player::AlphaBetaSearchPlayer::new(4, &player::advanced_eval))
+        "b" => Box::new(player::MiniMaxPlayer::new(4, &player::basic_eval)),
+        _ => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval))
     };
 
     println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
@@ -168,8 +169,8 @@ fn internal_sim() {
         "h" => Box::new(player::HumanPlayer{}),
         #[cfg(feature = "random")]
         "r" => Box::new(player::RandomPlayer{}),
-        "b" => Box::new(player::MiniMaxSearchPlayer::new(4, &player::basic_eval)),
-        _ => Box::new(player::AlphaBetaSearchPlayer::new(4, &player::advanced_eval))
+        "b" => Box::new(player::MiniMaxPlayer::new(4, &player::basic_eval)),
+        _ => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval))
     };
 
     loop {

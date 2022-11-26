@@ -153,13 +153,13 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         king_square = board.white_king;
         own_king = WhiteKing;
 
-        if board.castling_rights.1 && board.get_piece_abs(B1) == Empty && board.get_piece_abs(C1) == Empty &&
-        board.get_piece_abs(D1) == Empty && !is_attacking_square(C1, board, Black) && !is_attacking_square(D1, board, Black) {
-            moves.push(Move::new_castle(board, king_square, C1));
-        }
-        if board.castling_rights.0 && board.get_piece_abs(F1) == Empty && board.get_piece_abs(G1) == Empty &&
+        if board.castling_rights & WHITE_KINGSIDE != NO_CASTLING_RIGHTS && board.get_piece_abs(F1) == Empty && board.get_piece_abs(G1) == Empty &&
         !is_attacking_square(F1, board, Black) && !is_attacking_square(G1, board, Black) {
             moves.push(Move::new_castle(board, king_square, G1));
+        }
+        if board.castling_rights & WHITE_QUEENSIDE != NO_CASTLING_RIGHTS && board.get_piece_abs(B1) == Empty && board.get_piece_abs(C1) == Empty &&
+        board.get_piece_abs(D1) == Empty && !is_attacking_square(C1, board, Black) && !is_attacking_square(D1, board, Black) {
+            moves.push(Move::new_castle(board, king_square, C1));
         }
 
     } else {
@@ -176,13 +176,13 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         king_square = board.black_king;
         own_king = BlackKing;
 
-        if board.castling_rights.3 && board.get_piece_abs(B8) == Empty && board.get_piece_abs(C8) == Empty &&
-        board.get_piece_abs(D8) == Empty && !is_attacking_square(C8, board, White) && !is_attacking_square(D8, board, White) {
-            moves.push(Move::new_castle(board, king_square, C8));
-        }
-        if board.castling_rights.2 && board.get_piece_abs(F8) == Empty && board.get_piece_abs(G8) == Empty &&
+        if board.castling_rights & BLACK_KINGSIDE != NO_CASTLING_RIGHTS && board.get_piece_abs(F8) == Empty && board.get_piece_abs(G8) == Empty &&
         !is_attacking_square(F8, board, White) && !is_attacking_square(G8, board, White) {
             moves.push(Move::new_castle(board, king_square, G8));
+        }
+        if board.castling_rights & BLACK_QUEENSIDE != NO_CASTLING_RIGHTS && board.get_piece_abs(B8) == Empty && board.get_piece_abs(C8) == Empty &&
+        board.get_piece_abs(D8) == Empty && !is_attacking_square(C8, board, White) && !is_attacking_square(D8, board, White) {
+            moves.push(Move::new_castle(board, king_square, C8));
         }
 
     }
@@ -215,7 +215,8 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
     let pinned_pieces = get_pinned_pieces(board, side_to_move);
     let attacked_squares = get_attacked_squares_surrounding_king(board, side_to_move);
 
-    if king_attackers.is_empty() { // can't move king into check or move pinned pieces
+    // can't move king into check or move pinned pieces
+    if king_attackers.is_empty() {
 
         for pseudo_legal_move in moves {
             
@@ -237,7 +238,8 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
             }
         }
 
-    } else if king_attackers.len() == 1 { // can only move king out of the way or block, no castling though
+    // can only move king out of the way or block, no castling though
+    } else if king_attackers.len() == 1 {
         
         let block_squares = &king_attackers[0];
 
@@ -265,7 +267,8 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
             }
         }
 
-    } else { // can only move king, no castling though
+    // can only move king, no castling though
+    } else {
 
         for pseudo_legal_move in moves {
 
@@ -498,13 +501,10 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
     let pawn = colour as u8 | PAWN;
     let backward = opp_colour.offset_index(square);
 
-    // println!("pawn");
     if board.get_piece_abs(backward - 1) as u8 == pawn || 
         board.get_piece_abs(backward + 1) as u8 == pawn {
         return true;
     }
-
-    // println!("knight");
 
     let knight = KNIGHT | colour as u8;
 
@@ -513,8 +513,6 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
             return true;
         }
     }
-    
-    // println!("diagonal");
 
     let bishop = BISHOP | colour as u8;
     let queen = QUEEN | colour as u8;
@@ -542,8 +540,6 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
         }
     }
     
-    // println!("orthogonal");
-    
     let rook = ROOK | colour as u8;
 
     for dir in ORTHOGONAL_OFFSETS {
@@ -569,8 +565,6 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
         }
     }
     
-    // println!("king");
-    
     let king = KING | colour as u8;
 
     for offset in KING_OFFSETS {
@@ -583,7 +577,8 @@ pub fn is_attacking_square(square: usize, board: &Board, colour: Colour) -> bool
 
 }
 
-pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u128 { // bitboard :)
+// bitboard :)
+pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u128 {
 
     let mut attacked_squares = 0;
 
@@ -607,18 +602,18 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
 
     match colour {
         White => {
-            if board.castling_rights.0 && is_attacking_square(C1, board, Black) {
+            if board.castling_rights & WHITE_KINGSIDE != NO_CASTLING_RIGHTS && is_attacking_square(C1, board, Black) {
                 attacked_squares |= 1 << C1;
             }
-            if board.castling_rights.1 && is_attacking_square(G1, board, Black) {
+            if board.castling_rights & WHITE_QUEENSIDE != NO_CASTLING_RIGHTS && is_attacking_square(G1, board, Black) {
                 attacked_squares |= 1 << G1;
             }
         },
         Black => {
-            if board.castling_rights.2 && is_attacking_square(C8, board, White) {
+            if board.castling_rights & BLACK_KINGSIDE != NO_CASTLING_RIGHTS && is_attacking_square(C8, board, White) {
                 attacked_squares |= 1 << C8;
             }
-            if board.castling_rights.3 && is_attacking_square(G8, board, White) {
+            if board.castling_rights & BLACK_QUEENSIDE != NO_CASTLING_RIGHTS && is_attacking_square(G8, board, White) {
                 attacked_squares |= 1 << G8;
             }
         }
