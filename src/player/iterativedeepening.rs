@@ -15,8 +15,8 @@ pub struct IterativeDeepening {
 
 impl IterativeDeepening {
 
-    pub fn new(max_depth: u64, score_board: BoardScore) -> IterativeDeepening {
-        IterativeDeepening{
+    pub fn new(max_depth: u64, score_board: BoardScore) -> Self {
+        Self{
             max_depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),

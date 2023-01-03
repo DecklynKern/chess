@@ -32,8 +32,8 @@ pub struct AlphaBetaPlayer {
 
 impl AlphaBetaPlayer {
 
-    pub fn new(depth: u64, score_board: BoardScore) -> AlphaBetaPlayer {
-        AlphaBetaPlayer{
+    pub fn new(depth: u64, score_board: BoardScore) -> Self {
+        Self{
             depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),

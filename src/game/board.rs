@@ -29,8 +29,8 @@ pub struct Board {
 
 impl Board {
 
-    pub fn default() -> Board {
-        Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
+    pub fn default() -> Self {
+        Self::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
     }
 
     pub fn get_piece(&self, row: usize, col: usize) -> Piece {
@@ -60,7 +60,7 @@ impl Board {
         )
     }
 
-    pub fn from_fen(f: String) -> Board {
+    pub fn from_fen(f: String) -> Self {
 
         let mut chars = f.chars(); 
         let mut setup_board = [Border; 144];
@@ -156,7 +156,7 @@ impl Board {
             fullturn_num += next.to_string().as_str();
         }
 
-        Board {
+        Self{
             board: setup_board,
             side_to_move,
             turns_taken: match fullturn_num.parse::<u64>() {

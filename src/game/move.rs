@@ -23,10 +23,10 @@ pub struct Move {
 
 impl Move {
 
-    fn create_move(board: &Board, start_square: usize, end_square: usize, move_type: MoveType) -> Move {
+    fn create_move(board: &Board, start_square: usize, end_square: usize, move_type: MoveType) -> Self {
         let moved_piece = board.get_piece_abs(start_square);
         let replaced_piece = board.get_piece_abs(end_square);
-        return Move {
+        return Self{
             start_square,
             end_square,
             moved_piece,
@@ -36,23 +36,23 @@ impl Move {
         };
     }
 
-    pub fn new(board: &Board, start_square: usize, end_square: usize) -> Move {
-        Move::create_move(board, start_square, end_square, MoveType::Normal)
+    pub fn new(board: &Board, start_square: usize, end_square: usize) -> Self {
+        Self::create_move(board, start_square, end_square, MoveType::Normal)
     }
 
-    pub fn new_pawn_double(board: &Board, start_square: usize, end_square: usize) -> Move {
-        Move::create_move(board, start_square, end_square, MoveType::PawnDouble)
+    pub fn new_pawn_double(board: &Board, start_square: usize, end_square: usize) -> Self {
+        Self::create_move(board, start_square, end_square, MoveType::PawnDouble)
     }
 
-    pub fn new_en_passant(board: &Board, start_square: usize, end_square: usize) -> Move {
-        Move::create_move(board, start_square, end_square, MoveType::EnPassant)
+    pub fn new_en_passant(board: &Board, start_square: usize, end_square: usize) -> Self {
+        Self::create_move(board, start_square, end_square, MoveType::EnPassant)
     }
 
-    pub fn new_promotion(board: &Board, start_square: usize, end_square: usize, promote_piece: Piece) -> Move {
-        Move::create_move(board, start_square, end_square, MoveType::Promotion(promote_piece))
+    pub fn new_promotion(board: &Board, start_square: usize, end_square: usize, promote_piece: Piece) -> Self {
+        Self::create_move(board, start_square, end_square, MoveType::Promotion(promote_piece))
     }
 
-    pub fn new_castle(board: &Board, start_square: usize, end_square: usize) -> Move {
+    pub fn new_castle(board: &Board, start_square: usize, end_square: usize) -> Self {
         Move::create_move(board, start_square, end_square, MoveType::Castle)
     }
 
@@ -113,5 +113,4 @@ impl Move {
     pub fn get_identifier(&self) -> u64 {
         self.moved_piece as u64 | (self.replaced_piece as u64) << 8 | (self.start_square as u64) << 16 | (self.end_square as u64) << 24
     }
-
 }

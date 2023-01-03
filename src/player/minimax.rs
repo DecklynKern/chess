@@ -12,8 +12,8 @@ pub struct MiniMaxPlayer {
 
 impl MiniMaxPlayer {
 
-    pub fn new(depth: usize, score_board: BoardScore) -> MiniMaxPlayer {
-        MiniMaxPlayer{
+    pub fn new(depth: usize, score_board: BoardScore) -> Self {
+        Self{
             depth,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),

@@ -37,7 +37,7 @@ pub enum Colour {
 
 impl Colour {
 
-    pub fn from_char(c: char) -> Colour {
+    pub fn from_char(c: char) -> Self {
         match c {
             'w' => White,
             'b' => Black,
@@ -52,7 +52,7 @@ impl Colour {
         }
     }
 
-    pub fn opposite(self) -> Colour {
+    pub fn opposite(self) -> Self {
         if self == Black {White} else {Black}
     }
 
@@ -92,7 +92,7 @@ pub enum Piece {
 
 impl Piece {
 
-    pub fn from_num(num: u8) -> Piece {
+    pub fn from_num(num: u8) -> Self {
         match num {
             0b0000 => WhitePawn,
             0b0001 => WhiteKnight,
@@ -128,7 +128,7 @@ impl Piece {
         self as u8 >> 3 == other as u8 >> 3
     }
 
-    pub fn from_char(c: char) -> Piece {
+    pub fn from_char(c: char) -> Self {
         match c {
             'P' => WhitePawn,
             'N' => WhiteKnight,
