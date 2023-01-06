@@ -23,16 +23,16 @@ fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 }
 
 pub struct AlphaBetaPlayer {
-    depth: u64,
+    depth: u32,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i64>,
-    nodes_searched: u64
+    transposition_table: hash::HashTable<i32>,
+    nodes_searched: u32
 }
 
 impl AlphaBetaPlayer {
 
-    pub fn new(depth: u64, score_board: BoardScore) -> Self {
+    pub fn new(depth: u32, score_board: BoardScore) -> Self {
         Self{
             depth,
             score_board,
@@ -42,11 +42,11 @@ impl AlphaBetaPlayer {
         }
     }
 
-    fn find_board_score(&mut self, board: &mut game::Board, depth: u64, mut alpha: i64, beta: i64, board_hash: u64) -> (i64, Option<game::Move>) {
+    fn find_board_score(&mut self, board: &mut game::Board, depth: u32, mut alpha: i32, beta: i32, board_hash: u64) -> (i32, Option<game::Move>) {
 
         self.nodes_searched += 1;
 
-        let mut score: i64;
+        let mut score: i32;
 
         if depth == 0 {
             score = (self.score_board)(board);

@@ -1,40 +1,40 @@
 use crate::game;
 
-pub type BoardScore = &'static(dyn Fn(&game::Board) -> i64);
+pub type BoardScore = &'static(dyn Fn(&game::Board) -> i32);
 
-pub const MIN_SCORE: i64 = i64::MIN + 1;
-pub const MAX_SCORE: i64 = i64::MAX;
+pub const MIN_SCORE: i32 = i32::MIN + 1;
+pub const MAX_SCORE: i32 = i32::MAX;
 
-pub const LOSE_SCORE: i64 = MIN_SCORE + 1;
-pub const WIN_SCORE: i64 = MAX_SCORE - 1;
+pub const LOSE_SCORE: i32 = MIN_SCORE + 1;
+pub const WIN_SCORE: i32 = MAX_SCORE - 1;
 
-const PAWN_VALUE: i64 = 100;
-const KNIGHT_VALUE: i64 = 320;
-const BISHOP_VALUE: i64 = 330;
-const ROOK_VALUE: i64 = 530;
-const QUEEN_VALUE: i64 = 960;
+const PAWN_VALUE: i32 = 100;
+const KNIGHT_VALUE: i32 = 320;
+const BISHOP_VALUE: i32 = 330;
+const ROOK_VALUE: i32 = 530;
+const QUEEN_VALUE: i32 = 960;
 
-pub fn basic_eval(board: &game::Board) -> i64 {
+pub fn basic_eval(board: &game::Board) -> i32 {
 
     let mut score = 0;
 
     let white_pieces = board.get_piece_counts(game::White);
     let black_pieces = board.get_piece_counts(game::Black);
 
-    score += PAWN_VALUE * (white_pieces.0 as i64 - black_pieces.0 as i64);
-    score += KNIGHT_VALUE * (white_pieces.1 as i64 - black_pieces.1 as i64);
-    score += BISHOP_VALUE * (white_pieces.2 as i64 - black_pieces.2 as i64);
-    score += ROOK_VALUE * (white_pieces.3 as i64 - black_pieces.3 as i64);
-    score += QUEEN_VALUE * (white_pieces.4 as i64 - black_pieces.4 as i64);
+    score += PAWN_VALUE * (white_pieces[0] as i32 - black_pieces[0] as i32);
+    score += KNIGHT_VALUE * (white_pieces[1] as i32 - black_pieces[1] as i32);
+    score += BISHOP_VALUE * (white_pieces[2] as i32 - black_pieces[2] as i32);
+    score += ROOK_VALUE * (white_pieces[3] as i32 - black_pieces[3] as i32);
+    score += QUEEN_VALUE * (white_pieces[4] as i32 - black_pieces[4] as i32);
 
-    score *= -board.side_to_move.to_dir() as i64;
+    score *= -board.side_to_move.to_dir() as i32;
 
     return score;
 
 }
 
 // thanks https://www.chessprogramming.org/Simplified_Evaluation_Function
-const PAWN_SQUARE_VALUES: [i64; 144] = [
+const PAWN_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,100,100,100,100,100,100,100,100,  0,  0,
@@ -49,7 +49,7 @@ const PAWN_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const KNIGHT_SQUARE_VALUES: [i64; 144] = [
+const KNIGHT_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,270,280,290,290,290,290,280,270,  0,  0,
@@ -64,7 +64,7 @@ const KNIGHT_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const BISHOP_SQUARE_VALUES: [i64; 144] = [
+const BISHOP_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,310,320,320,320,320,320,320,310,  0,  0,
@@ -79,7 +79,7 @@ const BISHOP_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const ROOK_SQUARE_VALUES: [i64; 144] = [
+const ROOK_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,530,530,530,530,530,530,530,530,  0,  0,
@@ -94,7 +94,7 @@ const ROOK_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const QUEEN_SQUARE_VALUES: [i64; 144] = [
+const QUEEN_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,940,950,950,955,955,950,950,940,  0,  0,
@@ -109,7 +109,7 @@ const QUEEN_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const KING_EARLY_SQUARE_VALUES: [i64; 144] = [
+const KING_EARLY_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,
@@ -124,17 +124,17 @@ const KING_EARLY_SQUARE_VALUES: [i64; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-const KING_LATE_SQUARE_VALUES: [i64; 144] = [ // wrong values lol
+const KING_LATE_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,
-    0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,
-    0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,
-    0,  0,-30,-40,-40,-50,-50,-40,-40,-30,  0,  0,
-    0,  0,-20,-30,-30,-40,-40,-30,-30,-20,  0,  0,
-    0,  0,-10,-20,-20,-20,-20,-20,-20,-10,  0,  0,
-    0,  0, 20, 20,  0,  0,  0,  0, 20, 20,  0,  0,
-    0,  0, 20, 30, 10,  0,  0, 10, 30, 20,  0,  0,
+    0,  0,-50,-40,-30,-20,-20,-30,-40,-50,  0,  0,
+    0,  0,-30,-20,-10,  0,  0,-10,-20,-30,  0,  0,
+    0,  0,-30,-10, 20, 30, 30, 20,-10,-30,  0,  0,
+    0,  0,-30,-10, 30, 40, 40, 30,-10,-30,  0,  0,
+    0,  0,-30,-10, 30, 40, 40, 30,-10,-30,  0,  0,
+    0,  0,-30,-10, 20, 30, 30, 20,-10,-30,  0,  0,
+    0,  0,-30,-30,  0,  0,  0,  0,-30,-30,  0,  0,
+    0,  0,-50,-30,-30,-30,-30,-30,-30,-50,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
@@ -143,12 +143,9 @@ fn flip(piece: usize) -> usize {
     143 - piece
 }
 
-pub fn advanced_eval(board: &game::Board) -> i64 {
+pub fn advanced_eval(board: &game::Board) -> i32 {
 
     let mut score = 0;
-
-    let white_pieces = board.get_piece_counts(game::White);
-    let black_pieces = board.get_piece_counts(game::Black);
 
     for &piece in &board.piece_positions[game::WhitePawn as usize] {
         score += PAWN_SQUARE_VALUES[piece];
@@ -190,11 +187,22 @@ pub fn advanced_eval(board: &game::Board) -> i64 {
         score -= QUEEN_SQUARE_VALUES[flip(piece)];
     }
 
-    // add late game stuff later
-    score += KING_EARLY_SQUARE_VALUES[board.white_king];
-    score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king)];
+    let white_pieces = board.get_piece_counts(game::White);
+    let black_pieces = board.get_piece_counts(game::Black);
 
-    score *= -(board.side_to_move.to_dir() as i64);
+    let in_late_game = white_pieces[4] + black_pieces[4] == 0 || 
+    white_pieces[2] + white_pieces[3] + black_pieces[2] + black_pieces[3] <= 2;
+
+    if in_late_game {
+        score += KING_LATE_SQUARE_VALUES[board.white_king];
+        score -= KING_LATE_SQUARE_VALUES[flip(board.black_king)];
+        
+    } else {
+        score += KING_EARLY_SQUARE_VALUES[board.white_king];
+        score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king)];
+    }
+
+    score *= -(board.side_to_move.to_dir() as i32);
 
     return score;
 

@@ -623,7 +623,7 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
 
 }
 
-pub fn get_num_moves(board: &mut Board, depth: u64) -> u64 {
+pub fn get_num_moves(board: &mut Board, depth: u32) -> u32 {
 
     if depth == 0 {
         return 1;
@@ -632,7 +632,7 @@ pub fn get_num_moves(board: &mut Board, depth: u64) -> u64 {
     let possible_moves = get_possible_moves(board);
     
     if depth == 1 {
-        return possible_moves.len() as u64;
+        return possible_moves.len() as u32;
     }
 
     let mut moves = 0;

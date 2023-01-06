@@ -13,7 +13,7 @@ fn main() {
 
     match split.next().unwrap() {
         "uci" => uci(),
-        "perft" => perft(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), split.next().unwrap().parse::<usize>().unwrap() as u64),
+        "perft" => perft(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), split.next().unwrap().parse::<usize>().unwrap() as u32),
         _ => internal_sim()
     }
 }
@@ -107,7 +107,7 @@ fn uci() {
     }
 }
 
-fn perft(fen: String, depth: u64) {
+fn perft(fen: String, depth: u32) {
  
     let start_time = time::Instant::now();
 
@@ -125,7 +125,7 @@ fn perft(fen: String, depth: u64) {
 
     let end_time = time::Instant::now();
 
-    let diff = (end_time - start_time).as_millis() as u64;
+    let diff = (end_time - start_time).as_millis() as u32;
 
     println!();
     println!("Total time : {}ms", diff);

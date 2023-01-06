@@ -6,7 +6,7 @@ pub struct MiniMaxPlayer {
     depth: usize,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i64>,
+    transposition_table: hash::HashTable<i32>,
     nodes_searched: usize
 }
 
@@ -22,7 +22,7 @@ impl MiniMaxPlayer {
         }
     }
 
-    fn find_move_score(&mut self, move_to_check: &game::Move, board: &mut game::Board, depth: usize) -> i64 {
+    fn find_move_score(&mut self, move_to_check: &game::Move, board: &mut game::Board, depth: usize) -> i32 {
 
         board.make_move(move_to_check);
         self.nodes_searched += 1;
@@ -63,7 +63,7 @@ impl Player for MiniMaxPlayer {
         
         let mut best_move = None;
         let mut best_score = MIN_SCORE;
-        let mut score: i64;
+        let mut score: i32;
 
         self.transposition_table.clear();
         

@@ -18,7 +18,7 @@ where T: PartialEq {
 pub struct Board {
     board: [Piece; 144],
     pub side_to_move: Colour,
-    pub turns_taken: u64,
+    pub turns_taken: u32,
     pub previous_moves: Vec<Move>,
     pub en_passant_chance: Option<usize>,
     pub castling_rights: CastlingRights,
@@ -49,15 +49,15 @@ impl Board {
         row * 12 + col + 26
     }
 
-    pub fn get_piece_counts(&self, colour: Colour) -> (u64, u64, u64, u64, u64, u64) {
-        (
-            self.piece_positions[(colour as u8 | PAWN) as usize].len() as u64,
-            self.piece_positions[(colour as u8 | KNIGHT) as usize].len() as u64,
-            self.piece_positions[(colour as u8 | BISHOP) as usize].len() as u64,
-            self.piece_positions[(colour as u8 | ROOK) as usize].len() as u64,
-            self.piece_positions[(colour as u8 | QUEEN) as usize].len() as u64,
+    pub fn get_piece_counts(&self, colour: Colour) -> [u32; 6] {
+        [
+            self.piece_positions[(colour as u8 | PAWN) as usize].len() as u32,
+            self.piece_positions[(colour as u8 | KNIGHT) as usize].len() as u32,
+            self.piece_positions[(colour as u8 | BISHOP) as usize].len() as u32,
+            self.piece_positions[(colour as u8 | ROOK) as usize].len() as u32,
+            self.piece_positions[(colour as u8 | QUEEN) as usize].len() as u32,
             1
-        )
+        ]
     }
 
     pub fn from_fen(f: String) -> Self {
@@ -159,7 +159,7 @@ impl Board {
         Self{
             board: setup_board,
             side_to_move,
-            turns_taken: match fullturn_num.parse::<u64>() {
+            turns_taken: match fullturn_num.parse::<u32>() {
                 Ok(fullturns) => fullturns * 2 - 2 + if side_to_move == White {0} else {1},
                 Err(_) => 0
             },

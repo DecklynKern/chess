@@ -110,7 +110,7 @@ impl Move {
         );
     }
 
-    pub fn get_identifier(&self) -> u64 {
-        self.moved_piece as u64 | (self.replaced_piece as u64) << 8 | (self.start_square as u64) << 16 | (self.end_square as u64) << 24
+    pub fn get_identifier(&self) -> u32 {
+        self.moved_piece as u32 | (self.replaced_piece as u32) << 8 | (self.start_square as u32) << 16 | (self.end_square as u32) << 24
     }
 }

@@ -64,8 +64,6 @@ impl Zobrist {
 
     }
 
-    // nuked until i feel like touching this mess again
-
     pub fn update_hash(&self, mut hash: u64, move_made: &game::Move, old_en_passant_chance: Option<usize>, old_castling_rights: game::CastlingRights, new_castling_rights: CastlingRights) -> u64 {
 
         let moved_piece = self.piece_positions[move_made.moved_piece as usize];

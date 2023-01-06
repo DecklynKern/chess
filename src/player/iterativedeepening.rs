@@ -5,19 +5,19 @@ use crate::hash;
 use std::time;
 
 pub struct IterativeDeepening {
-    max_depth: u64,
+    max_time_millis: u128,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i64>,
+    transposition_table: hash::HashTable<i32>,
     pv_table: hash::HashTable<game::Move>,
-    nodes_searched: u64
+    nodes_searched: u32
 }
 
 impl IterativeDeepening {
 
-    pub fn new(max_depth: u64, score_board: BoardScore) -> Self {
+    pub fn new(approx_time_millis: u128, score_board: BoardScore) -> Self {
         Self{
-            max_depth,
+            max_time_millis: approx_time_millis,
             score_board,
             zobrist_hasher: hash::Zobrist::new(),
             transposition_table: hash::HashTable::new(),
@@ -26,11 +26,11 @@ impl IterativeDeepening {
         }
     }
 
-    fn find_board_score(&mut self, board: &mut game::Board, depth: u64, mut alpha: i64, beta: i64, board_hash: u64) -> (i64, Option<game::Move>) {
+    fn find_board_score(&mut self, board: &mut game::Board, depth: u32, mut alpha: i32, beta: i32, board_hash: u64) -> (i32, Option<game::Move>) {
 
         self.nodes_searched += 1;
 
-        let mut score: i64;
+        let mut score: i32;
 
         if depth == 0 {
             score = (self.score_board)(board);
@@ -117,23 +117,31 @@ impl Player for IterativeDeepening {
         
         let board_hash = self.zobrist_hasher.get_board_hash(board);
 
-        let mut eval;
+        let mut eval = 0;
         let mut best_move = None;
 
-        for search_depth in 1..=self.max_depth {
+        let mut time_taken = 0;
+
+        let mut search_depth = 1;
+        let start_time = time::Instant::now();
+
+        while time_taken < self.max_time_millis {
 
             self.transposition_table.clear();
-            let start_time = time::Instant::now();
 
             (eval, best_move) = self.find_board_score(board, search_depth, MIN_SCORE, MAX_SCORE, board_hash);
 
-            println!("depth {}: {}ms", search_depth, (time::Instant::now() - start_time).as_millis());
-            println!("best move: {}, eval: {}", best_move.unwrap().to_long_an(), eval);
+            // println!("depth {}: {}ms", search_depth, (time::Instant::now() - start_time).as_millis());
+            // println!("best move: {}, eval: {}", best_move.unwrap().to_long_an(), eval);
+
+            search_depth += 1;
+            time_taken = (time::Instant::now() - start_time).as_millis();
 
         }
 
-        // println!("nodes searched: {}", self.nodes_searched);
-        // println!("eval: {}", eval as f64 / 100.0);
+        println!("nodes searched: {}", self.nodes_searched);
+        println!("total depth: {}", search_depth);
+        println!("eval: {}", eval as f64 / 100.0);
 
         match best_move {
             Some(valid_move) => {
