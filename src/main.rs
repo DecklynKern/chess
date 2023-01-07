@@ -60,29 +60,8 @@ fn uci() {
 
                         let trimmed = move_to_play.trim();
 
-                        let start_square = game::long_an_to_index(String::from(trimmed));
-                        let end_square = game::long_an_to_index(trimmed.to_string()[2..4].to_string());
-                        let diff = start_square.max(end_square) - start_square.min(end_square);
-                        let piece = board.get_piece_abs(start_square);
-
                         // remove magic numbers potentially
-                        board.make_move(&if piece.is_pawn() && diff == 24 {
-                            if diff == 24 {
-                                game::Move::new_pawn_double(&board, start_square, end_square)
-                            } else if diff != 12 {
-                                game::Move::new_en_passant(&board, start_square, end_square)
-                            } else if !(36..=108).contains(&end_square) { // weirdest linting suggestion i've ever seen
-                                game::Move::new_promotion(&board, start_square, end_square, game::Piece::from_char(trimmed.to_string().chars().collect::<Vec<char>>()[5]))
-                            } else {
-                                game::Move::new(&board, start_square, end_square) // necessary duplicate to cover all cases
-                            }
-
-                        } else if piece.is_king() && diff == 2 {
-                            game::Move::new_castle(&board, start_square, end_square)
-
-                        } else {
-                            game::Move::new(&board, start_square, end_square)
-                        });
+                        board.make_move(&game::Move::from_long_an(trimmed, &board));
                     }
 
                 } else {

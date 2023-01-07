@@ -24,7 +24,7 @@ pub struct Board {
     pub castling_rights: CastlingRights,
     pub piece_positions: [Vec<usize>; 16],
     pub white_king: usize,
-    pub black_king: usize,
+    pub black_king: usize
 }
 
 impl Board {
