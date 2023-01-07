@@ -11,7 +11,7 @@ pub enum MoveType {
     Castle
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Move {
     pub start_square: usize,
     pub end_square: usize,

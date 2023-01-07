@@ -54,13 +54,19 @@ impl IterativeDeepening {
 
         }
 
+        if let Some(pv_move) = self.pv_table.get(board_hash) {
+
+            for (idx, possible_move) in possible_moves.iter().enumerate() {
+
+                if possible_move.start_square == pv_move.start_square && 
+                possible_move.end_square == pv_move.end_square {
+                    possible_moves.swap(0, idx);
+                    break;
+                }
+            }
+        }
+
         let mut best_move = None;
-
-        //let mut pv_id = 0;
-
-        // if let Some(pv_move) = self.pv_table.get(board_hash) {
-        //     possible_moves.insert(0, *pv_move);
-        // }
 
         for possible_move in possible_moves {
 
@@ -100,11 +106,11 @@ impl IterativeDeepening {
             }
         }
 
-        if let Some(pv_move) = best_move {
-            self.pv_table.set(board_hash, pv_move);
+        if let Some(pv_move) = &best_move {
+            self.pv_table.set(board_hash, pv_move.clone());
         }
 
-        return (score - 1 * score.signum(), best_move);
+        return (score - score.signum(), best_move);
 
     }
 }

@@ -33,8 +33,8 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    player = Box::new(player::AlphaBetaPlayer::new(8, &player::advanced_eval));
-    // player = Box::new(player::IterativeDeepening::new(6, &player::advanced_eval));
+    // player = Box::new(player::AlphaBetaPlayer::new(8, &player::advanced_eval));
+    player = Box::new(player::IterativeDeepening::new(5000, &player::advanced_eval));
 
     loop {
 
@@ -149,7 +149,7 @@ fn internal_sim() {
     let mut p1: Box<dyn player::Player>;
     let mut p2: Box<dyn player::Player>;
 
-    println!("enter p1 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
+    println!("enter p1 ('h' -> human, 'r' -> random, 'b' -> basicsearch, 'a' -> alphabeta, otherwise iterdeep): ");
 
     let mut line = get_line();
 
@@ -158,10 +158,11 @@ fn internal_sim() {
         #[cfg(feature = "random")]
         "r" => {println!("random player");Box::new(player::RandomPlayer{})},
         "b" => Box::new(player::MiniMaxPlayer::new(4, &player::basic_eval)),
-        _ => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval))
+        "a" => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval)),
+        _ => Box::new(player::IterativeDeepening::new(1500, &player::advanced_eval))
     };
 
-    println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, otherwise alphabeta): ");
+    println!("enter p2 ('h' -> human, 'r' -> random, 'b' -> basicsearch, 'a' -> alphabeta, otherwise iterdeep): ");
 
     line = get_line();
 
@@ -170,7 +171,8 @@ fn internal_sim() {
         #[cfg(feature = "random")]
         "r" => Box::new(player::RandomPlayer{}),
         "b" => Box::new(player::MiniMaxPlayer::new(4, &player::basic_eval)),
-        _ => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval))
+        "a" => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval)),
+        _ => Box::new(player::IterativeDeepening::new(1500, &player::advanced_eval))
     };
 
     loop {

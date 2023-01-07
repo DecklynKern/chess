@@ -1,4 +1,4 @@
-const NUM_BITS: usize = 16;
+const NUM_BITS: usize = 20;
 const ARR_SIZE: usize = 2usize.pow(NUM_BITS as u32);
 
 pub struct HashTable<T> {

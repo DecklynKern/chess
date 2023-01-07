@@ -108,7 +108,7 @@ impl AlphaBetaPlayer {
             }
         }
 
-        return (score - 1 * score.signum(), best_move);
+        return (score - score.signum(), best_move);
 
     }
 }
