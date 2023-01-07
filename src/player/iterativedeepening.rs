@@ -145,9 +145,9 @@ impl Player for IterativeDeepening {
 
         }
 
-        println!("nodes searched: {}", self.nodes_searched);
-        println!("total depth: {}", search_depth);
-        println!("eval: {}", eval as f64 / 100.0);
+        // println!("nodes searched: {}", self.nodes_searched);
+        // println!("total depth: {}", search_depth);
+        // println!("eval: {}", eval as f64 / 100.0);
 
         match best_move {
             Some(valid_move) => {
