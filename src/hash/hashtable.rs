@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 const NUM_BITS: usize = 20;
 const ARR_SIZE: usize = 2usize.pow(NUM_BITS as u32);
 
@@ -19,13 +21,13 @@ impl<T> HashTable<T> {
         }
     }
 
-    pub fn get(&self, hash: u64) -> Option<&T> {
+    pub fn get(&mut self, hash: u64) -> Option<&mut T> {
         
-        let result = &self.table[(hash & self.mask) as usize];
+        let result = &mut self.table[(hash & self.mask) as usize];
 
         for item in result {
             if item.0 == hash {
-                return Some(&item.1);
+                return Some(&mut item.1);
             }
         }
 
@@ -33,8 +35,14 @@ impl<T> HashTable<T> {
 
     }
 
-    pub fn set(&mut self, hash: u64, val: T) {
-        self.table[(hash & self.mask) as usize].push((hash, val));
+    pub fn set(&mut self, hash: u64, mut val: T) {
+        
+        if let Some(item) = self.get(hash) {
+            swap(item, &mut val);
+            
+        } else {
+            self.table[(hash & self.mask) as usize].push((hash, val));
+        }
     }
 
     pub fn clear(&mut self) {

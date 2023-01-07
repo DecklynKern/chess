@@ -86,7 +86,7 @@ impl AlphaBetaPlayer {
             );
 
             let move_score = match self.transposition_table.get(new_hash) {
-                Some(&cached_score) => cached_score,
+                Some(&mut cached_score) => cached_score,
                 _ => {
                     let move_score = -self.find_board_score(board, depth - 1, -beta, -alpha, board_hash).0;
                     self.transposition_table.set(board_hash, move_score);

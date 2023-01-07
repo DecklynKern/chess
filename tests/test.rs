@@ -57,12 +57,12 @@ fn hashing() {
 
     let hash = zobrist.get_board_hash(&board);
     table.set(hash, 1000);
-    assert_eq!(table.get(hash), Some(&1000));
+    assert_eq!(table.get(hash), Some(&mut 1000));
 
     let test_move = chess::game::Move::new(&board, chess::game::D2, chess::game::D3);
     board.make_move(&test_move);
     board.undo_move();
-    assert_eq!(table.get(zobrist.get_board_hash(&board)), Some(&1000));
+    assert_eq!(table.get(zobrist.get_board_hash(&board)), Some(&mut 1000));
 }
 
 #[test]
