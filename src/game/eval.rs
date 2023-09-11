@@ -130,7 +130,7 @@ fn add_sliding_moves(moves: &mut Vec<Move>, board: &Board, start_square: usize, 
 pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
     let side_to_move = board.side_to_move;
-    let mut moves: Vec<Move> = Vec::new();
+    let mut moves: Vec<Move> = Vec::with_capacity(30);
 
     let king_square: usize;
     let knight: Piece;
