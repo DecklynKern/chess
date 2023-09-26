@@ -33,7 +33,7 @@ impl Zobrist {
 
         Zobrist{
             piece_positions: array_init::array_init(|arr| 
-                if (arr as usize) != (game::Empty as usize) {array_init::array_init(|_| rng.get_rand())}
+                if arr != (game::Empty as usize) {array_init::array_init(|_| rng.get_rand())}
                 else {array_init::array_init(|_| 0)}),
             side_to_move_is_black: rng.get_rand(), 
             castling_rights: array_init::array_init(|_| rng.get_rand()),

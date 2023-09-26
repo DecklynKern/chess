@@ -65,23 +65,23 @@ impl Move {
 
         if piece.is_pawn() && diff == 24 {
             if diff == 24 {
-                Self::new_pawn_double(&board, start_square, end_square)
+                Self::new_pawn_double(board, start_square, end_square)
 
             } else if diff != 12 {
-                Self::new_en_passant(&board, start_square, end_square)
+                Self::new_en_passant(board, start_square, end_square)
 
             } else if !(36..=108).contains(&end_square) { // weirdest linting suggestion i've ever seen
-                Self::new_promotion(&board, start_square, end_square, Piece::from_char(long_an.to_string().chars().collect::<Vec<char>>()[5]))
+                Self::new_promotion(board, start_square, end_square, Piece::from_char(long_an.to_string().chars().collect::<Vec<char>>()[5]))
 
             } else {
-                Self::new(&board, start_square, end_square) // necessary duplicate to cover all cases
+                Self::new(board, start_square, end_square) // necessary duplicate to cover all cases
             }
 
         } else if piece.is_king() && diff == 2 {
-            Self::new_castle(&board, start_square, end_square)
+            Self::new_castle(board, start_square, end_square)
 
         } else {
-            Self::new(&board, start_square, end_square)
+            Self::new(board, start_square, end_square)
         }
     }
 

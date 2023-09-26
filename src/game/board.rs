@@ -35,13 +35,13 @@ impl Board {
 
     pub fn get_piece(&self, row: usize, col: usize) -> Piece {
         unsafe {
-            self.board.get_unchecked(row * 12 + col + 26)
+            *self.board.get_unchecked(row * 12 + col + 26)
         }
     }
 
     pub fn get_piece_abs(&self, pos: usize) -> Piece {
         unsafe {
-            self.board.get_unchecked(pos)
+            *self.board.get_unchecked(pos)
         }
     }
 
@@ -53,25 +53,25 @@ impl Board {
         row * 12 + col + 26
     }
 
-    pub fn get_piece_position(&self, colour: u8) -> &Vec<usize> {
+    pub fn get_piece_position(&self, piece: u8) -> &[usize] {
         unsafe {
-            self.piece_positions.get_unchecked(colour)
+            self.piece_positions.get_unchecked(piece as usize)
         }
     }
 
-    pub fn get_piece_position_mut(&mut self, colour: u8) -> &mut Vec<usize> {
+    pub fn get_piece_position_mut(&mut self, piece: u8) -> &mut Vec<usize> {
         unsafe {
-            self.piece_positions.get_unchecked_mut(colour)
+            self.piece_positions.get_unchecked_mut(piece as usize)
         }
     }
 
     pub fn get_piece_counts(&self, colour: Colour) -> [u32; 6] {
         [
-            self.get_piece_position(colour as u8 | PAWN),
-            self.get_piece_position(colour as u8 | KNIGHT),
-            self.get_piece_position(colour as u8 | BISHOP),
-            self.get_piece_position(colour as u8 | ROOK),
-            self.get_piece_position(colour as u8 | QUEEN),
+            self.get_piece_position(colour as u8 | PAWN).len() as u32,
+            self.get_piece_position(colour as u8 | KNIGHT).len() as u32,
+            self.get_piece_position(colour as u8 | BISHOP).len() as u32,
+            self.get_piece_position(colour as u8 | ROOK).len() as u32,
+            self.get_piece_position(colour as u8 | QUEEN).len() as u32,
             1
         ]
     }
@@ -156,20 +156,20 @@ impl Board {
 
         let mut fifty_turn_count = "".to_owned();
 
-        while let Some(next) = chars.next() {
-            if next == ' ' {
+        for char in chars.by_ref() {
+            if char == ' ' {
                 break;
             }
-            fifty_turn_count += next.to_string().as_str();
+            fifty_turn_count += char.to_string().as_str();
         }
 
         let mut fullturn_num = "".to_owned();
 
-        while let Some(next) = chars.next() {
-            if next == ' ' {
+        for char in chars.by_ref() {
+            if char == ' ' {
                 break;
             }
-            fullturn_num += next.to_string().as_str();
+            fullturn_num += char.to_string().as_str();
         }
 
         Self{
@@ -277,13 +277,13 @@ impl Board {
             self.board[move_to_make.end_square] = move_to_make.moved_piece;
             self.board[move_to_make.start_square] = Empty;
 
-            del_vec(self.get_piece_position_mut(move_to_make.replaced_piece), move_to_make.end_square);
+            del_vec(self.get_piece_position_mut(move_to_make.replaced_piece as u8), move_to_make.end_square);
 
         }
 
         self.en_passant_chance = None;
 
-        replace_vec(self.get_piece_position_mut(move_to_make.moved_piece), move_to_make.start_square, move_to_make.end_square);
+        replace_vec(self.get_piece_position_mut(move_to_make.moved_piece as u8), move_to_make.start_square, move_to_make.end_square);
 
         match move_to_make.move_type {
             MoveType::PawnDouble => {
@@ -384,7 +384,7 @@ impl Board {
             MoveType::EnPassant => {
                 let captured_square = opp_colour.offset_index(move_to_undo.end_square);
                 self.board[captured_square] = Piece::from_num(opp_colour as u8 | PAWN);
-                sself.get_piece_position_mut(opp_colour as u8 | PAWN).push(captured_square);
+                self.get_piece_position_mut(opp_colour as u8 | PAWN).push(captured_square);
             },
             MoveType::Promotion(promote_to) => {
                 self.board[move_to_undo.start_square] = Piece::from_num(move_colour as u8 | PAWN);
