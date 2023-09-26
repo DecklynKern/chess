@@ -2,3 +2,4 @@
 *.txt
 *.bat
 /web/target
+/src/bin/versions/*

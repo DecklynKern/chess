@@ -27,8 +27,8 @@ fn get_line() -> String {
 
 fn uci() {
 
-    println!("id name DeckChess");
-    println!("id author Deck");
+    println!("id name Chess");
+    println!("id author DecklynKern");
 
     let mut board = game::Board::default();
 
