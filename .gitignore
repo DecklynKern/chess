@@ -2,4 +2,5 @@
 *.txt
 *.bat
 /web/target
-/src/bin/versions/*
+/colosseum/games/*
+/colosseum/versions/*
