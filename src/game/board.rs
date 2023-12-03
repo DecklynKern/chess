@@ -16,15 +16,15 @@ where T: PartialEq {
 }
 
 pub struct Board {
-    board: [Piece; 144],
+    board: [Piece; 128],
     pub side_to_move: Colour,
     pub turns_taken: u32,
     pub previous_moves: Vec<Move>,
-    pub en_passant_chance: Option<usize>,
+    pub en_passant_chance: Option<Square>,
     pub castling_rights: CastlingRights,
-    pub piece_positions: [Vec<usize>; 16],
-    pub white_king: usize,
-    pub black_king: usize
+    pub piece_positions: [Vec<Square>; 16],
+    pub white_king: Square,
+    pub black_king: Square
 }
 
 impl Board {
@@ -33,62 +33,19 @@ impl Board {
         Self::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
     }
 
-    pub fn get_piece(&self, row: usize, col: usize) -> Piece {
-        unsafe {
-            *self.board.get_unchecked(row * 12 + col + 26)
-        }
-    }
-
-    pub fn get_piece_abs(&self, pos: usize) -> Piece {
-        unsafe {
-            *self.board.get_unchecked(pos)
-        }
-    }
-
-    pub fn pos_to_row_col(pos: usize) -> (usize, usize) {
-        (pos / 12 - 2, pos % 12 - 2)
-    }
-
-    pub fn row_col_to_pos(row: usize, col: usize) -> usize {
-        row * 12 + col + 26
-    }
-
-    pub fn get_piece_position(&self, piece: u8) -> &[usize] {
-        unsafe {
-            self.piece_positions.get_unchecked(piece as usize)
-        }
-    }
-
-    pub fn get_piece_position_mut(&mut self, piece: u8) -> &mut Vec<usize> {
-        unsafe {
-            self.piece_positions.get_unchecked_mut(piece as usize)
-        }
-    }
-
-    pub fn get_piece_counts(&self, colour: Colour) -> [u32; 6] {
-        [
-            self.get_piece_position(colour as u8 | PAWN).len() as u32,
-            self.get_piece_position(colour as u8 | KNIGHT).len() as u32,
-            self.get_piece_position(colour as u8 | BISHOP).len() as u32,
-            self.get_piece_position(colour as u8 | ROOK).len() as u32,
-            self.get_piece_position(colour as u8 | QUEEN).len() as u32,
-            1
-        ]
-    }
-
     pub fn from_fen(f: String) -> Self {
 
         let mut chars = f.chars(); 
-        let mut setup_board = [Border; 144];
+        let mut setup_board = [Border; 128];
         
-        let mut pos = A8;
+        let mut pos = A8 as usize;
 
         let mut white_king = 0;
         let mut black_king = 0;
 
         let mut piece_positions = array_init::array_init(|_| Vec::new());
 
-        while pos <= H1 {
+        while pos <= H1 as usize {
 
             let c = chars.next().unwrap();
 
@@ -99,24 +56,25 @@ impl Board {
                 setup_board[pos] = piece;
 
                 match piece {
-                    WhiteKing => white_king = pos,
-                    BlackKing => black_king = pos,
+                    WhiteKing => white_king = pos as Square,
+                    BlackKing => black_king = pos as Square,
                     _ => {}
                 };
 
-                piece_positions[piece as usize].push(pos);
+                piece_positions[piece as usize].push(pos as Square);
 
                 pos += 1;
-
-            } else if c.is_numeric() {
+                
+            }
+            else if c.is_numeric() {
                 for _ in 0..c.to_digit(10).unwrap() as usize {
                     setup_board[pos] = Empty;
                     pos += 1;
                 }
-            
-            } else {
+            }
+            else {
                 assert_eq!(c, '/');
-                pos += 4;
+                pos += 8;
             }
         }
 
@@ -141,16 +99,13 @@ impl Board {
         }
 
         let c = chars.next().unwrap();
-
-        let en_passant_chance = if c != '-' {
+        
+        let en_passant_chance = (c != '-').then(|| {
             let mut index = String::new();
             index.push(c);
             index.push(chars.next().unwrap());
-            Some(long_an_to_index(index))
-
-        } else {
-            None
-        };
+            an_to_square(index)
+        });
 
         chars.next();
 
@@ -172,7 +127,7 @@ impl Board {
             fullturn_num += char.to_string().as_str();
         }
 
-        Self{
+        Self {
             board: setup_board,
             side_to_move,
             turns_taken: match fullturn_num.parse::<u32>() {
@@ -188,7 +143,7 @@ impl Board {
         }
     }
 
-    pub fn to_fen(&self) -> String {
+    pub fn get_fen(&self) -> String {
         
         let mut fen = "".to_owned();
         
@@ -202,7 +157,7 @@ impl Board {
 
             for col in 0..8 {
                 
-                match self.get_piece(row, col) {
+                match self.get_piece_rc(row, col) {
 
                     Empty => {spaces += 1},
 
@@ -216,14 +171,12 @@ impl Board {
                         fen += &piece.to_char().to_string();
 
                     }
-
                 }
             }
 
             if spaces > 0 {
                 fen += &spaces.to_string();
             }
-
         }
 
         fen += " ";
@@ -254,62 +207,136 @@ impl Board {
         fen += " ";
 
         fen += match self.en_passant_chance {
-            Some(square) => index_to_long_an(square),
+            Some(square) => square_to_an(square),
             None => String::from("-")
         }.as_str();
 
         fen += " 0 ";
 
-        return fen + (self.turns_taken / 2 + 1).to_string().as_str(); // implement 50 turn rule someday
+        fen + (self.turns_taken / 2 + 1).to_string().as_str() // implement 50 turn rule someday
 
+    }
+
+    pub fn get_piece_rc(&self, row: usize, col: usize) -> Piece {
+        unsafe {
+            *self.board.get_unchecked(row * 16 + col)
+        }
+    }
+
+    pub fn get_piece(&self, square: Square) -> Piece {
+        unsafe {
+            *self.board.get_unchecked(square as usize)
+        }
+    }
+    
+    pub fn set_piece(&mut self, square: Square, piece: Piece) {
+        self.board[square as usize] = piece;
+    }
+
+    pub fn square_to_row_col(square: Square) -> (usize, usize) {
+        (square as usize / 16, square as usize % 16)
+    }
+
+    pub fn row_col_to_square(row: usize, col: usize) -> Square {
+        (row * 16 + col) as Square
+    }
+
+    pub fn get_piece_position(&self, piece: Piece) -> &[Square] {
+        unsafe {
+            self.piece_positions.get_unchecked(piece as usize)
+        }
+    }
+
+    pub fn get_piece_position_mut(&mut self, piece: Piece) -> &mut Vec<Square> {
+        unsafe {
+            self.piece_positions.get_unchecked_mut(piece as usize)
+        }
+    }
+
+    pub fn get_piece_counts(&self, colour: Colour) -> [u32; 6] {
+        [
+            self.get_piece_position((colour as u8 | PAWN).into()).len() as u32,
+            self.get_piece_position((colour as u8 | KNIGHT).into()).len() as u32,
+            self.get_piece_position((colour as u8 | BISHOP).into()).len() as u32,
+            self.get_piece_position((colour as u8 | ROOK).into()).len() as u32,
+            self.get_piece_position((colour as u8 | QUEEN).into()).len() as u32,
+            1
+        ]
+    }
+    
+    pub fn is_draw_by_insufficient_material(&self) -> bool {
+        self.piece_positions[WhitePawn as usize].len() == 0 && 
+        self.piece_positions[WhiteRook as usize].len() == 0 && 
+        self.piece_positions[WhiteQueen as usize].len() == 0 && 
+        self.piece_positions[WhiteBishop as usize].len() + self.piece_positions[WhiteKnight as usize].len() <= 1 && 
+        self.piece_positions[BlackPawn as usize].len() == 0 && 
+        self.piece_positions[BlackRook as usize].len() == 0 && 
+        self.piece_positions[BlackQueen as usize].len() == 0 && 
+        self.piece_positions[BlackBishop as usize].len() + self.piece_positions[WhiteKnight as usize].len() <= 1
     }
 
     pub fn make_move(&mut self, move_to_make: &Move) {
 
         let move_colour = self.side_to_move;
         let opp_colour = move_colour.opposite();
-
-        if move_to_make.replaced_piece == Empty {
-            self.board.swap(move_to_make.start_square, move_to_make.end_square);
-
-        } else {
-
-            self.board[move_to_make.end_square] = move_to_make.moved_piece;
-            self.board[move_to_make.start_square] = Empty;
-
-            del_vec(self.get_piece_position_mut(move_to_make.replaced_piece as u8), move_to_make.end_square);
-
-        }
-
-        self.en_passant_chance = None;
-
-        replace_vec(self.get_piece_position_mut(move_to_make.moved_piece as u8), move_to_make.start_square, move_to_make.end_square);
-
+        
         match move_to_make.move_type {
-            MoveType::PawnDouble => {
-                self.en_passant_chance = Some(opp_colour.offset_index(move_to_make.end_square));
-            },
             MoveType::EnPassant => {
-                let captured_square = opp_colour.offset_index(move_to_make.end_square);
-                self.board[captured_square] = Empty;
-                del_vec(self.get_piece_position_mut(opp_colour as u8 | PAWN), captured_square);
-            },
+                
+                self.set_piece(move_to_make.start_square, Empty);
+                self.set_piece(move_to_make.end_square, move_to_make.moved_piece);
+            
+                replace_vec(self.get_piece_position_mut(move_to_make.moved_piece), move_to_make.start_square, move_to_make.end_square);
+                
+                let captured_square = opp_colour.offset_rank(move_to_make.end_square);
+                let captured_piece = self.get_piece(captured_square);
+                self.set_piece(captured_square, Empty);
+                del_vec(self.get_piece_position_mut(captured_piece), captured_square);
+                
+            }
             MoveType::Promotion(promote_to) => {
-                self.board[move_to_make.end_square] = promote_to;
-                del_vec(self.get_piece_position_mut(move_colour as u8 | PAWN), move_to_make.end_square);
-                self.get_piece_position_mut(promote_to as u8).push(move_to_make.end_square);
-            },
+                
+                self.set_piece(move_to_make.start_square, Empty);
+                self.set_piece(move_to_make.end_square, promote_to);
+                
+                del_vec(self.get_piece_position_mut((move_colour as u8 | PAWN).into()), move_to_make.start_square);
+                self.get_piece_position_mut(promote_to).push(move_to_make.end_square);
+                
+                if move_to_make.replaced_piece != Empty {
+                    del_vec(self.get_piece_position_mut(move_to_make.replaced_piece), move_to_make.end_square);
+                }
+            }
             MoveType::Castle => {
-                let (rook_start_square, rook_end_square) = if move_to_make.end_square % 12 < 6 {
+                
+                let rook = (move_colour as u8 | ROOK).into();
+                let (rook_start_square, rook_end_square) = if move_to_make.end_square % 16 < 4 {
                     (move_to_make.end_square - 2, move_to_make.end_square + 1)
-                } else {
+                }
+                else {
                     (move_to_make.end_square + 1, move_to_make.end_square - 1)
                 };
-                replace_vec(self.get_piece_position_mut(move_colour as u8 | ROOK), rook_start_square, rook_end_square);
-                self.board.swap(rook_start_square, rook_end_square);
-            },
-            MoveType::Normal => {}
-        };
+                
+                self.set_piece(move_to_make.start_square, Empty);
+                self.set_piece(move_to_make.end_square, move_to_make.moved_piece);
+                self.set_piece(rook_start_square, Empty);
+                self.set_piece(rook_end_square, rook);
+                
+                replace_vec(self.get_piece_position_mut(move_to_make.moved_piece), move_to_make.start_square, move_to_make.end_square);
+                replace_vec(self.get_piece_position_mut(rook), rook_start_square, rook_end_square);
+                
+            }
+            _ => {
+                
+                self.set_piece(move_to_make.start_square, Empty);
+                self.set_piece(move_to_make.end_square, move_to_make.moved_piece);
+            
+                replace_vec(self.get_piece_position_mut(move_to_make.moved_piece), move_to_make.start_square, move_to_make.end_square);
+                
+                if move_to_make.replaced_piece != Empty {
+                    del_vec(self.get_piece_position_mut(move_to_make.replaced_piece), move_to_make.end_square);
+                }
+            }
+        }
 
         match move_to_make.moved_piece {
             WhiteRook if move_to_make.start_square == H1 => self.castling_rights &= !WHITE_KINGSIDE,
@@ -319,11 +346,11 @@ impl Board {
             WhiteKing => {
                 self.castling_rights &= !(WHITE_KINGSIDE | WHITE_QUEENSIDE);
                 self.white_king = move_to_make.end_square;
-            },
+            }
             BlackKing => {
                 self.castling_rights &= !(BLACK_KINGSIDE | BLACK_QUEENSIDE);
                 self.black_king = move_to_make.end_square;
-            },
+            }
             _ => {}
         }
 
@@ -335,6 +362,7 @@ impl Board {
             _ => ALL_CASTLING_RIGHTS
         };
 
+        self.en_passant_chance = (move_to_make.move_type == MoveType::PawnDouble).then(|| opp_colour.offset_rank(move_to_make.end_square));
         self.side_to_move = opp_colour;
         self.previous_moves.push(move_to_make.clone());
         self.turns_taken += 1;
@@ -346,21 +374,69 @@ impl Board {
         let opp_colour = self.side_to_move;
         let move_colour = opp_colour.opposite();
 
-        let move_to_undo = match self.previous_moves.pop() {
-            Some(last_move) => last_move,
-            None => return
+        let Some(move_to_undo) = self.previous_moves.pop()
+        else {
+            return;
         };
-
-        if move_to_undo.replaced_piece == Empty {
-            self.board.swap(move_to_undo.start_square, move_to_undo.end_square);
-
-        } else {
+        
+        match move_to_undo.move_type {
+            MoveType::EnPassant => {
+                
+                self.set_piece(move_to_undo.start_square, move_to_undo.moved_piece);
+                self.set_piece(move_to_undo.end_square, Empty);
             
-            self.board[move_to_undo.start_square] = move_to_undo.moved_piece;
-            self.board[move_to_undo.end_square] = move_to_undo.replaced_piece;
-
-            self.piece_positions[move_to_undo.replaced_piece as usize].push(move_to_undo.end_square);
-
+                replace_vec(self.get_piece_position_mut(move_to_undo.moved_piece), move_to_undo.end_square, move_to_undo.start_square);
+                
+                let captured_square = opp_colour.offset_rank(move_to_undo.end_square);
+                let pawn = (opp_colour as u8 | PAWN).into();
+                self.set_piece(captured_square, pawn);
+                self.get_piece_position_mut(pawn).push(captured_square);
+                
+            }
+            MoveType::Promotion(promote_to) => {
+                
+                let pawn = (move_colour as u8 | PAWN).into();
+                
+                self.set_piece(move_to_undo.start_square, pawn);
+                self.set_piece(move_to_undo.end_square, move_to_undo.replaced_piece);
+                
+                self.get_piece_position_mut(pawn).push(move_to_undo.start_square);
+                del_vec(self.get_piece_position_mut(promote_to), move_to_undo.end_square);
+                
+                if move_to_undo.replaced_piece != Empty {
+                    self.get_piece_position_mut(move_to_undo.replaced_piece).push(move_to_undo.end_square);
+                }
+            }
+            MoveType::Castle => {
+                
+                let rook = (move_colour as u8 | ROOK).into();
+                let (rook_start_square, rook_end_square) = if move_to_undo.end_square % 16 < 4 {
+                    (move_to_undo.end_square - 2, move_to_undo.end_square + 1)
+                }
+                else {
+                    (move_to_undo.end_square + 1, move_to_undo.end_square - 1)
+                };
+                
+                self.set_piece(move_to_undo.start_square, move_to_undo.moved_piece);
+                self.set_piece(move_to_undo.end_square, Empty);
+                self.set_piece(rook_start_square, rook);
+                self.set_piece(rook_end_square, Empty);
+                
+                replace_vec(self.get_piece_position_mut(move_to_undo.moved_piece), move_to_undo.end_square, move_to_undo.start_square);
+                replace_vec(self.get_piece_position_mut(rook), rook_end_square, rook_start_square);
+                
+            }
+            _ => {
+                
+                self.set_piece(move_to_undo.start_square, move_to_undo.moved_piece);
+                self.set_piece(move_to_undo.end_square, move_to_undo.replaced_piece);
+            
+                replace_vec(self.get_piece_position_mut(move_to_undo.moved_piece), move_to_undo.end_square, move_to_undo.start_square);
+                
+                if move_to_undo.replaced_piece != Empty {
+                    self.get_piece_position_mut(move_to_undo.replaced_piece).push(move_to_undo.end_square);
+                }
+            }
         }
 
         match move_to_undo.moved_piece {
@@ -369,42 +445,10 @@ impl Board {
             _ => {}
         }
 
-        self.en_passant_chance = if self.previous_moves.is_empty() {
-            None
-        } else {
-            let prev_move = self.previous_moves.last().unwrap();
-            match prev_move.move_type {
-                MoveType::PawnDouble =>Some(move_colour.offset_index(prev_move.end_square)),
-                _ => None
-            }
-        };
-
-        match move_to_undo.move_type {
-            MoveType::PawnDouble => {},
-            MoveType::EnPassant => {
-                let captured_square = opp_colour.offset_index(move_to_undo.end_square);
-                self.board[captured_square] = Piece::from_num(opp_colour as u8 | PAWN);
-                self.get_piece_position_mut(opp_colour as u8 | PAWN).push(captured_square);
-            },
-            MoveType::Promotion(promote_to) => {
-                self.board[move_to_undo.start_square] = Piece::from_num(move_colour as u8 | PAWN);
-                self.piece_positions[(move_colour as u8 | PAWN) as usize].push(move_to_undo.end_square);
-                del_vec(self.get_piece_position_mut(promote_to as u8), move_to_undo.end_square);
-            },
-            MoveType::Castle => {
-                let (rook_start_square, rook_end_square) = if move_to_undo.end_square % 12 < 6 {
-                    (move_to_undo.end_square - 2, move_to_undo.end_square + 1)
-                } else {
-                    (move_to_undo.end_square + 1, move_to_undo.end_square - 1)
-                };
-                replace_vec(self.get_piece_position_mut(move_colour as u8 | ROOK), rook_end_square, rook_start_square);
-                self.board.swap(rook_start_square, rook_end_square);
-            }
-            MoveType::Normal => {}
-        }
-
-        replace_vec(self.get_piece_position_mut(move_to_undo.moved_piece as u8), move_to_undo.end_square, move_to_undo.start_square);
-
+        self.en_passant_chance = self.previous_moves.last().and_then(|prev_move| {
+            (prev_move.move_type == MoveType::PawnDouble).then(|| move_colour.offset_rank(prev_move.end_square))
+        });
+        
         self.castling_rights = move_to_undo.old_castling_rights;
         self.side_to_move = move_colour;
         self.turns_taken -= 1;

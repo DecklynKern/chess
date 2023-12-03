@@ -60,7 +60,7 @@ impl AlphaBetaPlayer {
 
         if possible_moves.is_empty() {
             
-            if game::get_king_attackers(board, board.side_to_move).is_empty() {
+            if game::get_pinned_pieces_and_king_attackers(board, board.side_to_move).1 == 0 {
                 return (0, None);
             }
             

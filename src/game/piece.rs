@@ -1,4 +1,7 @@
 #![allow(non_upper_case_globals)]
+
+use super::Square;
+
 pub const White: Colour = Colour::White;
 pub const Black: Colour = Colour::Black;
 
@@ -29,7 +32,7 @@ pub const ROOK: u8 = 0b011;
 pub const QUEEN: u8 = 0b100;
 pub const KING: u8 = 0b101;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Colour {
     White = 0b0000,
     Black = 0b1000
@@ -53,13 +56,18 @@ impl Colour {
     }
 
     pub fn opposite(self) -> Self {
-        if self == Black {White} else {Black}
+        if self == Black {
+            White
+        }
+        else {
+            Black
+        }
     }
 
-    pub fn offset_index(self, index: usize) -> usize {
+    pub fn offset_rank(self, square: Square) -> Square {
         match self {
-            White => index - 12,
-            Black => index + 12 
+            White => square - 16,
+            Black => square + 16 
         }
     }
 
@@ -72,7 +80,7 @@ impl Colour {
 
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Piece {
     WhitePawn = 0b0000,
     WhiteKnight = 0b0001,
@@ -91,26 +99,6 @@ pub enum Piece {
 }
 
 impl Piece {
-
-    pub fn from_num(num: u8) -> Self {
-        match num {
-            0b0000 => WhitePawn,
-            0b0001 => WhiteKnight,
-            0b0010 => WhiteBishop,
-            0b0011 => WhiteRook,
-            0b0100 => WhiteQueen,
-            0b0101 => WhiteKing,
-            0b1000 => BlackPawn,
-            0b1001 => BlackKnight,
-            0b1010 => BlackBishop,
-            0b1011 => BlackRook,
-            0b1100 => BlackQueen,
-            0b1101 => BlackKing,
-            0b1110 => Empty,
-            0b1111 => Border,
-            _ => unreachable!()
-        }
-    }
 
     pub fn get_colour(self) -> Colour {
         match (self as u8) & 0b1000 {
@@ -150,7 +138,7 @@ impl Piece {
 
     pub fn to_char(self) -> char {
         return match self {
-            WhitePawn=> 'P',
+            WhitePawn => 'P',
             WhiteKnight => 'N',
             WhiteBishop => 'B',
             WhiteRook => 'R',
@@ -162,6 +150,19 @@ impl Piece {
             BlackRook => 'r',
             BlackQueen => 'q',
             BlackKing => 'k',
+            Empty => ' ',
+            Border => '#',
+        }
+    }
+
+    pub fn to_an_char(self) -> char {
+        return match self {
+            WhitePawn | BlackPawn => 'P',
+            WhiteKnight | BlackKnight => 'N',
+            WhiteBishop | BlackBishop => 'B',
+            WhiteRook | BlackRook => 'R',
+            WhiteQueen | BlackQueen => 'Q',
+            WhiteKing | BlackKing => 'K',
             Empty => ' ',
             Border => '#',
         }
@@ -190,5 +191,26 @@ impl Piece {
     pub fn is_king(self) -> bool {
         (self as u8) & 0b111 == KING
     }
+}
 
+impl From<u8> for Piece {
+    fn from(value: u8) -> Self {
+        match value {
+            0b0000 => WhitePawn,
+            0b0001 => WhiteKnight,
+            0b0010 => WhiteBishop,
+            0b0011 => WhiteRook,
+            0b0100 => WhiteQueen,
+            0b0101 => WhiteKing,
+            0b1000 => BlackPawn,
+            0b1001 => BlackKnight,
+            0b1010 => BlackBishop,
+            0b1011 => BlackRook,
+            0b1100 => BlackQueen,
+            0b1101 => BlackKing,
+            0b1110 => Empty,
+            0b1111 => Border,
+            _ => unreachable!()
+        }
+    }
 }

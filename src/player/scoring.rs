@@ -1,4 +1,5 @@
 use crate::game;
+use crate::game::Square;
 
 pub type BoardScore = &'static(dyn Fn(&game::Board) -> i32);
 
@@ -15,6 +16,10 @@ const ROOK_VALUE: i32 = 530;
 const QUEEN_VALUE: i32 = 960;
 
 pub fn basic_eval(board: &game::Board) -> i32 {
+    
+    if board.is_draw_by_insufficient_material() {
+        return 0;
+    }
 
     let mut score = 0;
 
@@ -139,52 +144,56 @@ const KING_LATE_SQUARE_VALUES: [i32; 144] = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 ];
 
-fn flip(piece: usize) -> usize {
-    143 - piece
+fn flip(square: Square) -> Square {
+    143 - square
 }
 
 pub fn advanced_eval(board: &game::Board) -> i32 {
+    
+    if board.is_draw_by_insufficient_material() {
+        return 0;
+    }
 
     let mut score = 0;
 
     for &piece in &board.piece_positions[game::WhitePawn as usize] {
-        score += PAWN_SQUARE_VALUES[piece];
+        score += PAWN_SQUARE_VALUES[piece as usize];
     }
 
     for &piece in &board.piece_positions[game::BlackPawn as usize] {
-        score -= PAWN_SQUARE_VALUES[flip(piece)];
+        score -= PAWN_SQUARE_VALUES[flip(piece) as usize];
     }
 
     for &piece in &board.piece_positions[game::WhiteKnight as usize] {
-        score += KNIGHT_SQUARE_VALUES[piece];
+        score += KNIGHT_SQUARE_VALUES[piece as usize];
     }
 
     for &piece in &board.piece_positions[game::BlackKnight as usize] {
-        score -= KNIGHT_SQUARE_VALUES[flip(piece)];
+        score -= KNIGHT_SQUARE_VALUES[flip(piece) as usize];
     }
 
     for &piece in &board.piece_positions[game::WhiteBishop as usize] {
-        score += BISHOP_SQUARE_VALUES[piece];
+        score += BISHOP_SQUARE_VALUES[piece as usize];
     }
 
     for &piece in &board.piece_positions[game::BlackBishop as usize] {
-        score -= BISHOP_SQUARE_VALUES[flip(piece)];
+        score -= BISHOP_SQUARE_VALUES[flip(piece) as usize];
     }
 
     for &piece in &board.piece_positions[game::WhiteRook as usize] {
-        score += ROOK_SQUARE_VALUES[piece];
+        score += ROOK_SQUARE_VALUES[piece as usize];
     }
 
     for &piece in &board.piece_positions[game::BlackRook as usize] {
-        score -= ROOK_SQUARE_VALUES[flip(piece)];
+        score -= ROOK_SQUARE_VALUES[flip(piece) as usize];
     }
 
     for &piece in &board.piece_positions[game::WhiteQueen as usize] {
-        score += QUEEN_SQUARE_VALUES[piece];
+        score += QUEEN_SQUARE_VALUES[piece as usize];
     }
 
     for &piece in &board.piece_positions[game::BlackQueen as usize] {
-        score -= QUEEN_SQUARE_VALUES[flip(piece)];
+        score -= QUEEN_SQUARE_VALUES[flip(piece) as usize];
     }
 
     let white_pieces = board.get_piece_counts(game::White);
@@ -194,12 +203,12 @@ pub fn advanced_eval(board: &game::Board) -> i32 {
     white_pieces[2] + white_pieces[3] + black_pieces[2] + black_pieces[3] <= 2;
 
     if in_late_game {
-        score += KING_LATE_SQUARE_VALUES[board.white_king];
-        score -= KING_LATE_SQUARE_VALUES[flip(board.black_king)];
+        score += KING_LATE_SQUARE_VALUES[board.white_king as usize];
+        score -= KING_LATE_SQUARE_VALUES[flip(board.black_king) as usize];
         
     } else {
-        score += KING_EARLY_SQUARE_VALUES[board.white_king];
-        score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king)];
+        score += KING_EARLY_SQUARE_VALUES[board.white_king as usize];
+        score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king) as usize];
     }
 
     score *= -(board.side_to_move.to_dir() as i32);

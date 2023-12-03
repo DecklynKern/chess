@@ -62,9 +62,10 @@ fn uci() {
 
                         // remove magic numbers potentially
                         board.make_move(&game::Move::from_long_an(trimmed, &board));
+                        
                     }
-
-                } else {
+                }
+                else {
                     board = game::Board::from_fen(split.collect::<Vec<&str>>().join(" "));
                 }
             },
@@ -73,11 +74,14 @@ fn uci() {
                 if let Some(valid_move) = player.get_move(&mut board, &possible_moves) {
                     let move_text = valid_move.to_long_an();
                     println!("bestmove {}", move_text);
-
-                } else {
+                }
+                else {
                     println!("resign");   
                 }
-            },
+            }
+            "fen" => {
+                println!("{}", board.get_fen());
+            }
             "stop" => {}, // ?
             "ponderhit" => {},
             "quit" => break,
@@ -115,7 +119,7 @@ fn perft(fen: String, depth: u32) {
 fn print_board(board: &game::Board) {
     for row in 0..8 {
         for col in 0..8 {
-            print!("{} ", board.get_piece(row, col).to_char());
+            print!("{} ", board.get_piece_rc(row, col).to_char());
         }
         println!()
     }
@@ -151,7 +155,7 @@ fn internal_sim() {
         "r" => Box::new(player::RandomPlayer{}),
         "b" => Box::new(player::MiniMaxPlayer::new(4, &player::basic_eval)),
         "a" => Box::new(player::AlphaBetaPlayer::new(4, &player::advanced_eval)),
-        _ => Box::new(player::IterativeDeepening::new(1500, &player::advanced_eval))
+        _ => Box::new(player::IterativeDeepening::new(5000, &player::advanced_eval))
     };
 
     loop {
@@ -173,8 +177,8 @@ fn internal_sim() {
 
         let move_to_make = if board.side_to_move == game::Colour::White {
             p1.get_move(&mut board, &possible_moves)
-
-        } else {
+        }
+        else {
             p2.get_move(&mut board, &possible_moves)
         };
 
