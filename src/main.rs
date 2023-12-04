@@ -8,6 +8,8 @@ use std::time;
 
 fn main() {
 
+    game::load_move_boards();
+
     let line = get_line();
     let mut split = line.trim().split(' ');
 

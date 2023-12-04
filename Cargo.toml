@@ -1,4 +1,4 @@
-workspace = { members = ["colosseum"] }
+#workspace = { members = ["colosseum"] }
 [package]
 name = "chess"
 version = "0.1.0"
@@ -23,4 +23,5 @@ random = ["dep:rand"]
 opt-level = 1
 
 [profile.release]
+debug = true
 lto = true

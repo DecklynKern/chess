@@ -93,31 +93,57 @@ pub const VALID_SQUARES: [Square; 64] = [
     A1, B1, C1, D1, E1, F1, G1, H1, 
 ];
 
-const KNIGHT_OFFSETS: [i8; 8] = [-33, -31, -18, -14, 14, 18, 31, 33];
-pub static mut KNIGHT_JUMP_BOARDS: [u128; 128] = [0; 128];
+pub const KNIGHT_OFFSETS: [i8; 8] = [-33, -31, -18, -14, 14, 18, 31, 33];
+pub const KING_OFFSETS: [i8; 8] = [-17, -16, -15, -1, 1, 15, 16, 17];
+pub const ORTHOGONAL_OFFSETS: [i8; 4] = [-16, -1, 1, 16];
+pub const DIAGONAL_OFFSETS: [i8; 4] = [-17, -15, 15, 17];
 
-pub fn load_knight_jump_boards() {
+pub static mut WHITE_PAWN_MOVE_BOARDS: [u128; 128] = [0; 128];
+pub static mut BLACK_PAWN_MOVE_BOARDS: [u128; 128] = [0; 128];
+pub static mut KNIGHT_MOVE_BOARDS: [u128; 128] = [0; 128];
+pub static mut KING_MOVE_BOARDS: [u128; 128] = [0; 128];
+
+pub fn load_move_boards() {
     
     for square in VALID_SQUARES {
         
-        let mut jump_board = 0;
+        let mut white_pawn_move_board = 0;
+        let mut black_pawn_move_board = 0;
+        let mut knight_move_board = 0;
+        let mut king_move_board = 0;
         
         for offset in KNIGHT_OFFSETS {
-            let test_square = (square as i8 + offset) as Square;
+            let test_square = square.wrapping_add_signed(offset);
             if square_is_on_board(test_square) {
-                jump_board |= 1 << test_square;
+                knight_move_board |= 1 << test_square;
+            }
+        }
+
+        for offset in KING_OFFSETS {
+            let test_square = square.wrapping_add_signed(offset);
+            if square_is_on_board(test_square) {
+                king_move_board |= 1 << test_square;
             }
         }
         
         unsafe {
-            KNIGHT_JUMP_BOARDS[square as usize] = jump_board;
+            WHITE_PAWN_MOVE_BOARDS[square as usize] = white_pawn_move_board;
+            BLACK_PAWN_MOVE_BOARDS[square as usize] = black_pawn_move_board;
+            KNIGHT_MOVE_BOARDS[square as usize] = knight_move_board;
+            KING_MOVE_BOARDS[square as usize] = king_move_board;
         }
     }
 }
 
-pub fn get_knight_jump_board(square: Square) -> u128 {
+pub fn get_knight_move_board(square: Square) -> u128 {
     unsafe {
-        KNIGHT_JUMP_BOARDS[square as usize]
+        KNIGHT_MOVE_BOARDS[square as usize]
+    }
+}
+
+pub fn get_king_move_board(square: Square) -> u128 {
+    unsafe {
+        KING_MOVE_BOARDS[square as usize]
     }
 }
 

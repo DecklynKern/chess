@@ -44,7 +44,7 @@ impl IterativeDeepening {
 
         if possible_moves.is_empty() { // could also hash these i guess
             
-            if game::get_pinned_pieces_and_king_attackers(board, board.side_to_move).1 == 0 {
+            if game::get_position_info(board, board.side_to_move).king_attacker_count == 0 {
                 self.transposition_table.set(board_hash, 0);
                 return (0, None);
             }

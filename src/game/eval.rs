@@ -4,11 +4,6 @@ use super::piece::*;
 use super::board::*;
 use super::r#move::*;
 
-const KNIGHT_OFFSETS: [i8; 8] = [-33, -31, -18, -14, 14, 18, 31, 33];
-const KING_OFFSETS: [i8; 8] = [-17, -16, -15, -1, 1, 15, 16, 17];
-const ORTHOGONAL_OFFSETS: [i8; 4] = [-16, -1, 1, 16];
-const DIAGONAL_OFFSETS: [i8; 4] = [-17, -15, 15, 17];
-
 pub fn is_back_rank(colour: Colour, square: Square) -> bool {
     (colour == White && square >= A1) || (colour == Black && square <= H8)
 }
@@ -66,7 +61,7 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: Squar
         let test_square = forward_square - 1;
         let piece_at = board.get_piece(test_square);
 
-        if board.get_piece(test_square) != Piece::Empty && piece_at.get_colour() != colour {
+        if piece_at != Piece::Empty && piece_at.get_colour() != colour {
             add_pawn_moves(moves, board, start_square, test_square, colour as u8, is_promo);
         }
     }
@@ -76,7 +71,7 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: Squar
         let test_square = forward_square + 1;
         let piece_at = board.get_piece(test_square);
 
-        if board.get_piece(test_square) != Piece::Empty && piece_at.get_colour() != colour {
+        if piece_at != Piece::Empty && piece_at.get_colour() != colour {
             add_pawn_moves(moves, board, start_square, test_square, colour as u8, is_promo);
         }
     }
@@ -213,62 +208,64 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
     let mut legal_moves: Vec<Move> = Vec::with_capacity(moves.capacity());
     
-    let (pinned_pieces, king_attackers, king_attack_block_board) = get_pinned_pieces_and_king_attackers(board, side_to_move);
+    let position_info = get_position_info(board, side_to_move);
+
+    match position_info.king_attacker_count {
+        0 => {
+            
+            // can't move king into check or move pinned pieces
+            for pseudo_legal_move in moves {
     
-    // can't move king into check or move pinned pieces
-    if king_attackers == 0 {
-
-        for pseudo_legal_move in moves {
-
-            let mut is_pinned = false;
-
-            for (pinned_square, safe_squares) in &pinned_pieces {
-                if *pinned_square == pseudo_legal_move.start_square && safe_squares & 1 << pseudo_legal_move.end_square == 0 {
-                    is_pinned = true;
-                    break;
-                }
-            }
-
-            if !is_pinned {
-                legal_moves.push(pseudo_legal_move);
-            }
-        }
-    }
-    // can only move king out of the way or block, no castling though
-    else if king_attackers == 1 {
-
-        for pseudo_legal_move in moves {
-
-            if pseudo_legal_move.move_type == MoveType::Castle {
-                continue;
-            }
-
-            if pseudo_legal_move.moved_piece == own_king && pseudo_legal_move.move_type != MoveType::Castle ||
-            pseudo_legal_move.moved_piece != own_king && king_attack_block_board & 1 << pseudo_legal_move.end_square != 0 {
-                
                 let mut is_pinned = false;
-
-                for (pinned_square, safe_squares) in &pinned_pieces {
+    
+                for (pinned_square, safe_squares) in &position_info.pinned_pieces {
                     if *pinned_square == pseudo_legal_move.start_square && safe_squares & 1 << pseudo_legal_move.end_square == 0 {
                         is_pinned = true;
                         break;
                     }
                 }
-
+    
                 if !is_pinned {
                     legal_moves.push(pseudo_legal_move);
                 }
             }
         }
-    }
-    // can only move king, no castling though
-    else {
+        1 => {
+            
+            // can only move king out of the way or block, no castling though
+            for pseudo_legal_move in moves {
+    
+                if pseudo_legal_move.move_type == MoveType::Castle {
+                    continue;
+                }
+    
+                if pseudo_legal_move.moved_piece == own_king && pseudo_legal_move.move_type != MoveType::Castle ||
+                pseudo_legal_move.moved_piece != own_king && position_info.king_block_board & 1 << pseudo_legal_move.end_square != 0 {
+                    
+                    let mut is_pinned = false;
+    
+                    for (pinned_square, safe_squares) in &position_info.pinned_pieces {
+                        if *pinned_square == pseudo_legal_move.start_square && safe_squares & 1 << pseudo_legal_move.end_square == 0 {
+                            is_pinned = true;
+                            break;
+                        }
+                    }
+    
+                    if !is_pinned {
+                        legal_moves.push(pseudo_legal_move);
+                    }
+                }
+            }
+        }
+        _ => {
 
-        for pseudo_legal_move in moves {
+            // can only move king, no castling though
+            for pseudo_legal_move in moves {
 
-            if pseudo_legal_move.moved_piece == own_king
-            && pseudo_legal_move.move_type != MoveType::Castle {
-                legal_moves.push(pseudo_legal_move);
+                if pseudo_legal_move.moved_piece == own_king
+                && pseudo_legal_move.move_type != MoveType::Castle {
+                    legal_moves.push(pseudo_legal_move);
+                }
             }
         }
     }
@@ -277,11 +274,19 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
 }
 
-pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (Vec<(Square, u128)>, u32, u128) {
+pub struct PositionInfo {
+    pub pinned_pieces: Vec<(Square, u128)>,
+    pub king_attacker_count: u32,
+    pub king_block_board: u128,
+    pub opponent_attacked_squares: u128
+}
+
+pub fn get_position_info(board: &Board, colour: Colour) -> PositionInfo {
     
     let mut pinned_pieces = Vec::new();
-    let mut attackers = 0;
-    let mut block_squares = 0;
+    let mut king_attacker_count = 0;
+    let mut king_block_board = 0;
+    let mut opponent_attacked_squares = 0;
 
     let king_square = match colour {
         White => board.white_king,
@@ -289,6 +294,12 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
     };
 
     let opp_colour = colour.opposite() as u8;
+
+    let opp_pawn = (PAWN | opp_colour).into();
+
+    for pawn in board.get_piece_position(opp_pawn) {
+        //opponent_attacked_squares |= 
+    }
     
     if !is_back_two_ranks(colour.opposite(), king_square as Square) {
 
@@ -300,12 +311,12 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
         let opp_pawn = (opp_colour | PAWN).into();
 
         if board.get_piece(test_square1)  == opp_pawn {
-            attackers += 1;
-            block_squares |= 1 << test_square1;
+            king_attacker_count += 1;
+            king_block_board |= 1 << test_square1;
         }
         else if board.get_piece(test_square2)  == opp_pawn {
-            attackers += 1;
-            block_squares |= 1 << test_square2;
+            king_attacker_count += 1;
+            king_block_board |= 1 << test_square2;
         }
     }
     
@@ -314,8 +325,8 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
     for offset in KNIGHT_OFFSETS {
         let test_square = king_square.wrapping_add_signed(offset);
         if board.get_piece(test_square) as u8 == opp_knight {
-            attackers += 1;
-            block_squares |= 1 << test_square;
+            king_attacker_count += 1;
+            king_block_board |= 1 << test_square;
             break;
         }
     }
@@ -367,8 +378,8 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
                 
                 match pin {
                     PinAttack::NoneFound => {
-                        block_squares |= line_squares;
-                        attackers += 1;
+                        king_block_board |= line_squares;
+                        king_attacker_count += 1;
                     }
                     PinAttack::Pin(pin_square) => {
                         pinned_pieces.push((pin_square, line_squares))
@@ -422,8 +433,8 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
                 
                 match pin {
                     PinAttack::NoneFound => {
-                        block_squares |= line_squares;
-                        attackers += 1;
+                        king_block_board |= line_squares;
+                        king_attacker_count += 1;
                     }
                     PinAttack::Pin(pin_square) => {
                         pinned_pieces.push((pin_square, line_squares))
@@ -436,9 +447,13 @@ pub fn get_pinned_pieces_and_king_attackers(board: &Board, colour: Colour) -> (V
 
         }
     }
-    
-    (pinned_pieces, attackers, block_squares)
-    
+
+    PositionInfo {
+        pinned_pieces,
+        king_attacker_count,
+        king_block_board,
+        opponent_attacked_squares
+    }
 }
 
 pub fn is_attacking_square(square: Square, board: &Board, colour: Colour) -> bool {
@@ -555,7 +570,7 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
             if board.castling_rights & WHITE_QUEENSIDE != NO_CASTLING_RIGHTS && is_attacking_square(G1, board, Black) {
                 attacked_squares |= 1 << G1;
             }
-        },
+        }
         Black => {
             if board.castling_rights & BLACK_KINGSIDE != NO_CASTLING_RIGHTS && is_attacking_square(C8, board, White) {
                 attacked_squares |= 1 << C8;
