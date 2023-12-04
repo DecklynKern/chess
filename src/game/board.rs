@@ -233,14 +233,6 @@ impl Board {
         self.board[square as usize] = piece;
     }
 
-    pub fn square_to_row_col(square: Square) -> (usize, usize) {
-        (square as usize / 16, square as usize % 16)
-    }
-
-    pub fn row_col_to_square(row: usize, col: usize) -> Square {
-        (row * 16 + col) as Square
-    }
-
     pub fn get_piece_position(&self, piece: Piece) -> &[Square] {
         unsafe {
             self.piece_positions.get_unchecked(piece as usize)
