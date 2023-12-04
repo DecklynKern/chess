@@ -6,8 +6,7 @@ const BUCKET_SIZE: usize = 4;
 #[derive(Clone, Copy, Default)]
 struct Bucket<T: Default + Copy + Sized> {
     pub hashes: [u64; BUCKET_SIZE],
-    pub values: [T; BUCKET_SIZE],
-    pub replace_idx: usize
+    pub values: [T; BUCKET_SIZE]
 }
 
 impl<T: Default + Copy + Sized> Bucket<T> {
@@ -53,8 +52,8 @@ impl<T: Default + Copy + Sized> HashTable<T> {
 
         let bucket = self.get_bucket(hash);
 
-        bucket.values[bucket.replace_idx] = val;
-        bucket.replace_idx = (bucket.replace_idx - 1) % BUCKET_SIZE;
+        bucket.values.rotate_right(1);
+        bucket.values[0] = val;
         
     }
 
