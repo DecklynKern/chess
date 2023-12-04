@@ -73,8 +73,6 @@ impl IterativeDeepening {
             let old_en_passant_chance = board.en_passant_chance;
             let old_castling_rights = board.castling_rights;
 
-            board.make_move(&possible_move);
-
             let new_hash = self.zobrist_hasher.update_hash(
                 board_hash,
                 &possible_move,
@@ -83,16 +81,20 @@ impl IterativeDeepening {
                 board.castling_rights
             );
 
-            let move_score = match self.transposition_table.get(new_hash) {
-                Some(&mut cached_score) => cached_score,
-                _ => {
-                    let move_score = -self.find_board_score(board, depth - 1, -beta, -alpha, board_hash).0;
-                    self.transposition_table.set(board_hash, move_score);
-                    move_score
-                }
-            };
+            let move_score = if let Some(&mut cached_score) = self.transposition_table.get(new_hash) {
+                cached_score
+            }
+            else {
 
-            board.undo_move();
+                board.make_move(&possible_move);
+                
+                let move_score = -self.find_board_score(board, depth - 1, -beta, -alpha, board_hash).0;
+                self.transposition_table.set(board_hash, move_score);
+                
+                board.undo_move();
+                move_score
+                
+            }
 
             if move_score > score {
                 best_move = Some(possible_move);
@@ -110,7 +112,7 @@ impl IterativeDeepening {
             self.pv_table.set(board_hash, pv_move.clone());
         }
 
-        return (score - score.signum(), best_move);
+        (score - score.signum(), best_move)
 
     }
 }
@@ -153,12 +155,12 @@ impl Player for IterativeDeepening {
             Some(valid_move) => {
                 for possible_move in possible_moves {
                     if possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square {
-                        return Some(possible_move)
+                        Some(possible_move)
                     }
                 }
-                return None
+                None
             },
-            None => return None
+            None => None
         }
     }
 }
