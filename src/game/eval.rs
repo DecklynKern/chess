@@ -19,7 +19,7 @@ pub fn is_back_two_ranks(colour: Colour, square: Square) -> bool {
 
 fn try_add_move(moves: &mut Vec<Move>, board: &Board, start_square: Square, offset: i8) -> bool {
 
-    let end_square = start_square + offset as Square;
+    let end_square = start_square.wrapping_add_signed(offset);
 
     if !square_is_on_board(end_square) {
         return false;
@@ -130,6 +130,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
     let mut moves: Vec<Move> = Vec::with_capacity(32);
 
     let king_square: Square;
+    let pawn: Piece;
     let knight: Piece;
     let bishop: Piece;
     let rook: Piece;
@@ -138,10 +139,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
     if side_to_move == White {
 
-        for &pawn in &board.piece_positions[WhitePawn as usize] {
-            gen_valid_pawn_moves(&mut moves, board, pawn, White);
-        }
-
+        pawn = WhitePawn;
         knight = WhiteKnight;
         bishop = WhiteBishop;
         rook = WhiteRook;
@@ -161,10 +159,7 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
     }
     else {
 
-        for &pawn in &board.piece_positions[BlackPawn as usize] {
-            gen_valid_pawn_moves(&mut moves, board, pawn, Black);
-        }
-
+        pawn = BlackPawn;
         knight = BlackKnight;
         bishop = BlackBishop;
         rook = BlackRook;
@@ -181,6 +176,10 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
         board.get_piece(D8) == Empty && !is_attacking_square(C8, board, White) && !is_attacking_square(D8, board, White) {
             moves.push(Move::new_castle(board, king_square, C8));
         }
+    }
+
+    for &pawn in &board.piece_positions[pawn as usize] {
+        gen_valid_pawn_moves(&mut moves, board, pawn, side_to_move);
     }
 
     for &knight in &board.piece_positions[knight as usize] {
@@ -206,7 +205,8 @@ pub fn get_possible_moves(board: &Board) -> Vec<Move> {
 
     // just prevent walking king into an attack to start with
     for offset in KING_OFFSETS {
-        if king_surrounding_attacked_squares & 1 << (king_square + offset as u8) == 0 {
+        let test_square = king_square.wrapping_add_signed(offset);
+        if test_square < 0x80 && king_surrounding_attacked_squares & (1 << test_square) == 0 {
             try_add_move(&mut moves, board, king_square, offset);
         }
     }
@@ -466,13 +466,13 @@ pub fn is_attacking_square(square: Square, board: &Board, colour: Colour) -> boo
 
     for dir in DIAGONAL_OFFSETS {
         
-        let mut test_square = square as i8;
+        let mut test_square = square;
         
         loop {
             
-            test_square += dir;
+            test_square = test_square.wrapping_add_signed(dir);
 
-            let piece = board.get_piece(test_square as Square);
+            let piece = board.get_piece(test_square);
 
             if piece == Empty || piece.is_king() {
                 continue;
@@ -491,11 +491,11 @@ pub fn is_attacking_square(square: Square, board: &Board, colour: Colour) -> boo
 
     for dir in ORTHOGONAL_OFFSETS {
         
-        let mut test_square = square as i8;
+        let mut test_square = square;
         
         loop {
             
-            test_square += dir;
+            test_square = test_square.wrapping_add_signed(dir);
 
             let piece = board.get_piece(test_square as Square);
 
@@ -532,11 +532,11 @@ pub fn get_attacked_squares_surrounding_king(board: &Board, colour: Colour) -> u
     let king = match colour {
         White => board.white_king,
         Black => board.black_king
-    } as i8;
+    };
 
     for offset in KING_OFFSETS {
 
-        let test_square = (king + offset) as Square;
+        let test_square = king.wrapping_add_signed(offset);
 
         if !square_is_on_board(test_square) {
             continue;
