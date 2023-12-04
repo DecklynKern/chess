@@ -1,54 +1,66 @@
-use std::mem::swap;
-
 const NUM_BITS: usize = 20;
 const ARR_SIZE: usize = 2usize.pow(NUM_BITS as u32);
+const MASK: u64 = u64::MAX >> (64 - NUM_BITS);
+const BUCKET_SIZE: usize = 4;
 
-pub struct HashTable<T> {
-    mask: u64,
-    table: Vec<Vec<(u64, T)>>,
+#[derive(Clone, Copy, Default)]
+struct Bucket<T: Default + Copy + Sized> {
+    pub hashes: [u64; BUCKET_SIZE],
+    pub values: [T; BUCKET_SIZE],
+    pub replace_idx: usize
 }
 
-impl<T> HashTable<T> {
+impl<T: Default + Copy + Sized> Bucket<T> {
+    pub fn clear(&mut self) {
+        self.hashes = [0; BUCKET_SIZE];
+    }
+}
 
-    pub fn new() -> HashTable<T> {
-        let mut vec = Vec::with_capacity(ARR_SIZE);
-        for _ in 0..ARR_SIZE {
-            vec.push(Vec::new());
-        };
-        HashTable{
-            mask: 0xFFFFFFFFFFFFFFFFu64 >> (64 - NUM_BITS),
-            table: vec
+pub struct HashTable<T: Default + Copy + Sized> {
+    // AoS -> SoA helps?
+    table: Box<[Bucket<T>; ARR_SIZE]>
+}
+
+impl<T: Default + Copy + Sized> HashTable<T> {
+
+    // using hash 0 to mean no entry
+    // if a hash actually is 0, we get kinda screwed
+    pub fn new() -> Self {
+        Self {
+            table: Box::new([Bucket::default(); ARR_SIZE])
         }
+    }
+
+    fn get_bucket(&mut self, hash: u64) -> &mut Bucket<T> {
+        &mut self.table[(hash & MASK) as usize]
     }
 
     pub fn get(&mut self, hash: u64) -> Option<&mut T> {
-        
-        let result = &mut self.table[(hash & self.mask) as usize];
 
-        for item in result {
-            if item.0 == hash {
-                return Some(&mut item.1);
+        let bucket = self.get_bucket(hash);
+
+        for (idx, saved_hash) in bucket.hashes.iter_mut().enumerate() {
+            if *saved_hash == hash {
+                return Some(&mut bucket.values[idx]);
             }
         }
 
-        return None;
+        None
 
     }
-
+    
     pub fn set(&mut self, hash: u64, mut val: T) {
+
+        let bucket = self.get_bucket(hash);
+
+        bucket.values[bucket.replace_idx] = val;
+        bucket.replace_idx = (bucket.replace_idx - 1) % BUCKET_SIZE;
         
-        if let Some(item) = self.get(hash) {
-            swap(item, &mut val);
-            
-        } else {
-            self.table[(hash & self.mask) as usize].push((hash, val));
-        }
     }
 
     pub fn clear(&mut self) {
-        for vec in self.table.iter_mut() {
-            vec.clear();
+        for bucket in self.table.iter_mut() {
+            bucket.clear();
         }
     }
-
 }
