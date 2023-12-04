@@ -116,20 +116,20 @@ pub fn load_move_boards() {
 
         let (row, col) = square_to_row_col(square);
 
-        if (col != 0) {
-            if (row != 0) {
+        if col != 0 {
+            if row != 0 {
                 white_pawn_attack_board |= 1 << row_col_to_square(row - 1, col - 1);
             }
-            if (row != 7) {
+            if row != 7 {
                 white_pawn_attack_board |= 1 << row_col_to_square(row + 1, col - 1);
             }
         }
 
-        if (col != 7) {
-            if (row != 0) {
+        if col != 7 {
+            if row != 0 {
                 black_pawn_attack_board |= 1 << row_col_to_square(row - 1, col + 1);
             }
-            if (row != 7) {
+            if row != 7 {
                 black_pawn_attack_board |= 1 << row_col_to_square(row + 1, col + 1);
             }
         }
@@ -160,15 +160,9 @@ pub fn load_move_boards() {
 pub fn get_pawn_attack_board(square: Square, colour: Colour) -> u128 {
     unsafe {
         match colour {
-            Colour::White => WHITE_PAWN_ATTACK_BOARDS[square],
-            Colour::Black => BLACK_PAWN_ATTACK_BOARDS[square]
+            Colour::White => WHITE_PAWN_ATTACK_BOARDS[square as usize],
+            Colour::Black => BLACK_PAWN_ATTACK_BOARDS[square as usize]
         }
-    }
-}
-
-pub fn get_knight_move_board(square: Square) -> u128 {
-    unsafe {
-        KNIGHT_MOVE_BOARDS[square as usize]
     }
 }
 
