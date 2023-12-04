@@ -1,3 +1,5 @@
+use super::Colour;
+
 pub type CastlingRights = u8;
 
 pub const ALL_CASTLING_RIGHTS: CastlingRights = 0b1111;
@@ -98,8 +100,8 @@ pub const KING_OFFSETS: [i8; 8] = [-17, -16, -15, -1, 1, 15, 16, 17];
 pub const ORTHOGONAL_OFFSETS: [i8; 4] = [-16, -1, 1, 16];
 pub const DIAGONAL_OFFSETS: [i8; 4] = [-17, -15, 15, 17];
 
-pub static mut WHITE_PAWN_MOVE_BOARDS: [u128; 128] = [0; 128];
-pub static mut BLACK_PAWN_MOVE_BOARDS: [u128; 128] = [0; 128];
+pub static mut WHITE_PAWN_ATTACK_BOARDS: [u128; 128] = [0; 128];
+pub static mut BLACK_PAWN_ATTACK_BOARDS: [u128; 128] = [0; 128];
 pub static mut KNIGHT_MOVE_BOARDS: [u128; 128] = [0; 128];
 pub static mut KING_MOVE_BOARDS: [u128; 128] = [0; 128];
 
@@ -107,10 +109,30 @@ pub fn load_move_boards() {
     
     for square in VALID_SQUARES {
         
-        let mut white_pawn_move_board = 0;
-        let mut black_pawn_move_board = 0;
+        let mut white_pawn_attack_board = 0;
+        let mut black_pawn_attack_board = 0;
         let mut knight_move_board = 0;
         let mut king_move_board = 0;
+
+        let (row, col) = square_to_row_col(square);
+
+        if (col != 0) {
+            if (row != 0) {
+                white_pawn_attack_board |= 1 << row_col_to_square(row - 1, col - 1);
+            }
+            if (row != 7) {
+                white_pawn_attack_board |= 1 << row_col_to_square(row + 1, col - 1);
+            }
+        }
+
+        if (col != 7) {
+            if (row != 0) {
+                black_pawn_attack_board |= 1 << row_col_to_square(row - 1, col + 1);
+            }
+            if (row != 7) {
+                black_pawn_attack_board |= 1 << row_col_to_square(row + 1, col + 1);
+            }
+        }
         
         for offset in KNIGHT_OFFSETS {
             let test_square = square.wrapping_add_signed(offset);
@@ -127,11 +149,26 @@ pub fn load_move_boards() {
         }
         
         unsafe {
-            WHITE_PAWN_MOVE_BOARDS[square as usize] = white_pawn_move_board;
-            BLACK_PAWN_MOVE_BOARDS[square as usize] = black_pawn_move_board;
+            WHITE_PAWN_ATTACK_BOARDS[square as usize] = white_pawn_attack_board;
+            BLACK_PAWN_ATTACK_BOARDS[square as usize] = black_pawn_attack_board;
             KNIGHT_MOVE_BOARDS[square as usize] = knight_move_board;
             KING_MOVE_BOARDS[square as usize] = king_move_board;
         }
+    }
+}
+
+pub fn get_pawn_attack_board(square: Square, colour: Colour) -> u128 {
+    unsafe {
+        match colour {
+            Colour::White => WHITE_PAWN_ATTACK_BOARDS[square],
+            Colour::Black => BLACK_PAWN_ATTACK_BOARDS[square]
+        }
+    }
+}
+
+pub fn get_knight_move_board(square: Square) -> u128 {
+    unsafe {
+        KNIGHT_MOVE_BOARDS[square as usize]
     }
 }
 
@@ -145,6 +182,14 @@ pub fn get_king_move_board(square: Square) -> u128 {
     unsafe {
         KING_MOVE_BOARDS[square as usize]
     }
+}
+
+pub fn square_to_row_col(square: Square) -> (usize, usize) {
+    (square as usize / 16, square as usize % 16)
+}
+
+pub fn row_col_to_square(row: usize, col: usize) -> Square {
+    (row * 16 + col) as Square
 }
 
 pub fn square_is_on_board(square: Square) -> bool {
