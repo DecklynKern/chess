@@ -213,6 +213,6 @@ pub fn advanced_eval(board: &game::Board) -> i32 {
 
     score *= -(board.side_to_move.to_dir() as i32);
 
-    return score;
+    score
 
 }

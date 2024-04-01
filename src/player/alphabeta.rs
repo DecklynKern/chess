@@ -26,7 +26,7 @@ pub struct AlphaBetaPlayer {
     depth: u32,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i32>,
+    transposition_table: hash::HashTable<i32, 20, 4>,
     nodes_searched: u32
 }
 
@@ -126,16 +126,8 @@ impl Player for AlphaBetaPlayer {
         // println!("nodes searched: {}", self.nodes_searched);
         // println!("eval: {}", eval as f64 / 100.0);
 
-        match best_move {
-            Some(valid_move) => {
-                for possible_move in possible_moves {
-                    if possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square {
-                        return Some(possible_move)
-                    }
-                }
-                return None
-            },
-            None => return None
-        }
+        best_move.and_then(|valid_move| {
+            possible_moves.iter().find(|possible_move| possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square)
+        })
     }
 }

@@ -11,7 +11,7 @@ pub enum MoveType {
     Castle
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Move {
     pub start_square: Square,
     pub end_square: Square,
@@ -19,6 +19,19 @@ pub struct Move {
     pub replaced_piece: Piece,
     pub old_castling_rights : CastlingRights,
     pub move_type: MoveType
+}
+
+impl Default for Move {
+    fn default() -> Self {
+        Self {
+            start_square: 0,
+            end_square: 0,
+            moved_piece: Empty,
+            replaced_piece: Empty,
+            old_castling_rights: 0,
+            move_type: MoveType::Normal
+        }
+    }
 }
 
 impl Move {

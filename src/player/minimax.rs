@@ -6,7 +6,7 @@ pub struct MiniMaxPlayer {
     depth: usize,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i32>,
+    transposition_table: hash::HashTable<i32, 20, 4>,
     nodes_searched: usize
 }
 

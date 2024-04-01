@@ -20,7 +20,6 @@ pub const BlackQueen: Piece = Piece::BlackQueen;
 pub const BlackKing: Piece = Piece::BlackKing;
 
 pub const Empty: Piece = Piece::Empty;
-pub const Border: Piece = Piece::Border;
 
 pub const WHITE: u8 = 0b0000;
 pub const BLACK: u8 = 0b1000;
@@ -94,8 +93,7 @@ pub enum Piece {
     BlackRook = 0b1011,
     BlackQueen = 0b1100,
     BlackKing = 0b1101,
-    Empty = 0b1110,
-    Border = 0b1111
+    Empty = 0b1111
 }
 
 impl Piece {
@@ -131,7 +129,6 @@ impl Piece {
             'q' => BlackQueen,
             'k' => BlackKing,
             ' ' => Empty,
-            '#' => Border,
             _ => unreachable!()
         }
     }
@@ -150,8 +147,7 @@ impl Piece {
             BlackRook => 'r',
             BlackQueen => 'q',
             BlackKing => 'k',
-            Empty => ' ',
-            Border => '#',
+            Empty => ' '
         }
     }
 
@@ -163,8 +159,7 @@ impl Piece {
             WhiteRook | BlackRook => 'R',
             WhiteQueen | BlackQueen => 'Q',
             WhiteKing | BlackKing => 'K',
-            Empty => ' ',
-            Border => '#',
+            Empty => ' '
         }
     }
 
@@ -209,7 +204,6 @@ impl From<u8> for Piece {
             0b1100 => BlackQueen,
             0b1101 => BlackKing,
             0b1110 => Empty,
-            0b1111 => Border,
             _ => unreachable!()
         }
     }

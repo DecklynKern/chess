@@ -1,18 +1,20 @@
 extern crate chess;
 
+const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 #[test]
 fn shannon_number_1ply() {
-    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")), 2), 400);
+    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from(START_POS)), 2), 400);
 }
 
 #[test]
 fn shannon_number_2ply() {
-    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")), 4), 197281);
+    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from(START_POS)), 4), 197281);
 }
 
 #[test]
 fn shannon_number_3ply() {
-    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")), 6), 119060324);
+    assert_eq!(chess::game::get_num_moves(&mut chess::game::Board::from_fen(String::from(START_POS)), 6), 119060324);
 }
 
 #[test]
@@ -52,7 +54,7 @@ fn capture_queen_iterative_deepening() {
 fn hashing() {
 
     let zobrist = chess::hash::Zobrist::new();
-    let mut table = chess::hash::HashTable::new();
+    let mut table: chess::hash::HashTable<i32, 20, 4> = chess::hash::HashTable::new();
     let mut board = chess::game::Board::default();
 
     let hash = zobrist.get_board_hash(&board);

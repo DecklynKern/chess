@@ -36,7 +36,7 @@ fn uci() {
 
     let mut player: Box<dyn player::Player>;
     // player = Box::new(player::AlphaBetaPlayer::new(8, &player::advanced_eval));
-    player = Box::new(player::IterativeDeepening::new(5000, &player::advanced_eval));
+    player = Box::new(player::IterativeDeepening::new(500, &player::advanced_eval));
 
     loop {
 

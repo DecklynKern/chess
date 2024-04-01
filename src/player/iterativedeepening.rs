@@ -8,8 +8,8 @@ pub struct IterativeDeepening {
     max_time_millis: u128,
     score_board: BoardScore,
     zobrist_hasher: hash::Zobrist,
-    transposition_table: hash::HashTable<i32>,
-    pv_table: hash::HashTable<game::Move>,
+    transposition_table: hash::HashTable<i32, 20, 4>,
+    pv_table: hash::HashTable<game::Move, 20, 4>,
     nodes_searched: u32
 }
 
@@ -94,7 +94,7 @@ impl IterativeDeepening {
                 board.undo_move();
                 move_score
                 
-            }
+            };
 
             if move_score > score {
                 best_move = Some(possible_move);
@@ -147,20 +147,12 @@ impl Player for IterativeDeepening {
 
         }
 
-        // println!("nodes searched: {}", self.nodes_searched);
-        // println!("total depth: {}", search_depth);
+        println!("nodes searched: {}", self.nodes_searched);
+        println!("total depth: {}", search_depth);
         // println!("eval: {}", eval as f64 / 100.0);
 
-        match best_move {
-            Some(valid_move) => {
-                for possible_move in possible_moves {
-                    if possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square {
-                        Some(possible_move)
-                    }
-                }
-                None
-            },
-            None => None
-        }
+        best_move.and_then(|valid_move| {
+            possible_moves.iter().find(|possible_move| possible_move.start_square == valid_move.start_square && possible_move.end_square == valid_move.end_square)
+        })
     }
 }

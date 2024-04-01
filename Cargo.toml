@@ -19,6 +19,9 @@ optional = true
 default = ["random"]
 random = ["dep:rand"]
 
+[profile.test]
+opt-level = 1
+
 [profile.dev]
 opt-level = 1
 

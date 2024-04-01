@@ -114,23 +114,23 @@ pub fn load_move_boards() {
         let mut knight_move_board = 0;
         let mut king_move_board = 0;
 
-        let (row, col) = square_to_row_col(square);
+        let (rank, file) = square_to_rank_file(square);
 
-        if col != 0 {
-            if row != 0 {
-                white_pawn_attack_board |= 1 << row_col_to_square(row - 1, col - 1);
+        if rank != 0 {
+            if file != 0 {
+                white_pawn_attack_board |= 1 << row_col_to_square(rank - 1, file - 1);
             }
-            if row != 7 {
-                white_pawn_attack_board |= 1 << row_col_to_square(row + 1, col - 1);
+            if file != 7 {
+                white_pawn_attack_board |= 1 << row_col_to_square(rank - 1, file + 1);
             }
         }
 
-        if col != 7 {
-            if row != 0 {
-                black_pawn_attack_board |= 1 << row_col_to_square(row - 1, col + 1);
+        if rank != 7 {
+            if file != 0 {
+                black_pawn_attack_board |= 1 << row_col_to_square(rank + 1, file - 1);
             }
-            if row != 7 {
-                black_pawn_attack_board |= 1 << row_col_to_square(row + 1, col + 1);
+            if file != 7 {
+                black_pawn_attack_board |= 1 << row_col_to_square(rank + 1, file + 1);
             }
         }
         
@@ -178,7 +178,7 @@ pub fn get_king_move_board(square: Square) -> u128 {
     }
 }
 
-pub fn square_to_row_col(square: Square) -> (usize, usize) {
+pub fn square_to_rank_file(square: Square) -> (usize, usize) {
     (square as usize / 16, square as usize % 16)
 }
 
@@ -216,4 +216,14 @@ pub fn square_to_an(square: Square) -> String {
         ][square as usize % 8],
         8 - square / 16
     )
+}
+
+pub fn print_bitboard(board: u128) {
+    for rank in 0..8 {
+        for file in 0..8 {
+            print!("{}", (board >> (file + rank * 16)) & 1)
+        }
+        println!()
+    }
+    println!()
 }

@@ -58,7 +58,7 @@ impl Zobrist {
             None => 0
         };
 
-        return hash;
+        hash
 
     }
 
@@ -111,7 +111,7 @@ impl Zobrist {
 
         hash ^= self.side_to_move_is_black;
 
-        return hash;
+        hash
 
     }
 }

@@ -36,7 +36,7 @@ impl Board {
     pub fn from_fen(f: String) -> Self {
 
         let mut chars = f.chars(); 
-        let mut setup_board = [Border; 128];
+        let mut setup_board = [Empty; 128];
         
         let mut pos = A8 as usize;
 
