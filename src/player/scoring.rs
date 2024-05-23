@@ -204,14 +204,14 @@ pub fn advanced_eval(board: &game::Board) -> i32 {
 
     if in_late_game {
         score += KING_LATE_SQUARE_VALUES[board.white_king as usize];
-        score -= KING_LATE_SQUARE_VALUES[flip(board.black_king) as usize];
-        
-    } else {
+        score -= KING_LATE_SQUARE_VALUES[flip(board.black_king) as usize];    
+    }
+    else {
         score += KING_EARLY_SQUARE_VALUES[board.white_king as usize];
         score -= KING_EARLY_SQUARE_VALUES[flip(board.black_king) as usize];
     }
 
-    score *= -(board.side_to_move.to_dir() as i32);
+    score *= -board.side_to_move.to_dir() as i32;
 
     score
 

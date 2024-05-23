@@ -49,7 +49,7 @@ fn add_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: Square, end
     }
 }
 
-fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: Square, colour: Colour) {
+fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board: &Board, start_square: Square, colour: Colour) {
 
     let forward_square = colour.offset_rank(start_square);
 
@@ -82,7 +82,7 @@ fn gen_valid_pawn_moves(moves: &mut Vec<Move>, board:&Board, start_square: Squar
 
         let double_move_square = colour.offset_rank(forward_square);
 
-        if board.get_piece(double_move_square) == Empty && is_back_two_ranks(colour, start_square) {
+        if is_back_two_ranks(colour, start_square) && board.get_piece(double_move_square) == Empty {
             moves.push(Move::new_pawn_double(board, start_square, double_move_square));
         }
     }
@@ -336,55 +336,41 @@ pub fn get_position_info(board: &Board, colour: Colour) -> PositionInfo {
 
     let opp_bishop = BISHOP | opp_colour;
     let opp_queen = QUEEN | opp_colour;
-    let mut diagonal_attack_board = 0;
-
-    diagonal_attack_board |= calc_sliding_boards(
-        board,
-        board.get_piece_position(opp_bishop.into()),
-        &DIAGONAL_OFFSETS,
-        king_square,
-        &mut king_block_board,
-        &mut king_attacker_count,
-        &mut pinned_pieces
-    );
-
-    diagonal_attack_board |= calc_sliding_boards(
-        board,
-        board.get_piece_position(opp_queen.into()),
-        &DIAGONAL_OFFSETS,
-        king_square,
-        &mut king_block_board,
-        &mut king_attacker_count,
-        &mut pinned_pieces
-    );
-
-    opponent_attacked_squares |= diagonal_attack_board;
-
     let opp_rook = ROOK | opp_colour;
+
+    let opp_bishop_positions = board.get_piece_position(opp_bishop.into());
+    let opp_rook_positions = board.get_piece_position(opp_rook.into());
+    let opp_queen_positions = board.get_piece_position(opp_queen.into());
+
+    let opp_diagonal_positions = opp_bishop_positions
+        .iter()
+        .chain(opp_queen_positions)
+        .map(|pos| *pos);
     
-    let mut orthogonal_attack_board = 0;
+    let opp_orthogonal_positions = opp_rook_positions
+        .iter()
+        .chain(opp_queen_positions)
+        .map(|pos| *pos);
 
-    orthogonal_attack_board |= calc_sliding_boards(
+    opponent_attacked_squares |= calc_sliding_boards(
         board,
-        board.get_piece_position(opp_rook.into()),
-        &ORTHOGONAL_OFFSETS,
+        opp_diagonal_positions,
+        &DIAGONAL_OFFSETS,
         king_square,
         &mut king_block_board,
         &mut king_attacker_count,
         &mut pinned_pieces
     );
 
-    orthogonal_attack_board |= calc_sliding_boards(
+    opponent_attacked_squares |= calc_sliding_boards(
         board,
-        board.get_piece_position(opp_queen.into()),
+        opp_orthogonal_positions,
         &ORTHOGONAL_OFFSETS,
         king_square,
         &mut king_block_board,
         &mut king_attacker_count,
         &mut pinned_pieces
     );
-
-    opponent_attacked_squares |= orthogonal_attack_board;
 
     PositionInfo {
         pinned_pieces,
@@ -402,14 +388,15 @@ enum PinAttack {
     ThroughKing
 }
 
+#[inline(always)]
 fn calc_sliding_boards(
-    board: &Board, piece_squares: &[Square], offsets: &[i8; 4], king_square: Square, king_block_board: &mut u128,
+    board: &Board, piece_squares: impl Iterator<Item = Square>, offsets: &[i8; 4], king_square: Square, king_block_board: &mut u128,
     king_attacker_count: &mut u32, pinned_pieces: &mut Vec<(Square, u128)>
 ) -> u128 {
 
     let mut attack_board = 0;
 
-    for &piece_square in piece_squares {
+    for piece_square in piece_squares {
 
         for &dir in offsets {
         
