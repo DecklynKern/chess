@@ -3,45 +3,6 @@ use std::collections::HashMap;
 use super::r#move::*;
 use super::board::*;
 
-/*
-[Event "Live Chess"]
-[Site "Chess.com"]
-[Date "2024.10.09"]
-[Round "-"]
-[White "DeckSSB"]
-[Black "fishmannan"]
-[Result "1-0"]
-[CurrentPosition "2q3k1/3n2p1/2N4p/r2nPp2/3P3P/3Q2P1/1P1B4/5RK1 b - -"]
-[Timezone "UTC"]
-[ECO "E05"]
-[ECOUrl "https://www.chess.com/openings/Catalan-Opening-Open-Defense-Classical-Line-6.O-O-O-O"]
-[UTCDate "2024.10.09"]
-[UTCTime "23:33:13"]
-[WhiteElo "1828"]
-[BlackElo "1751"]
-[TimeControl "900+10"]
-[Termination "DeckSSB won by resignation"]
-[StartTime "23:33:13"]
-[EndDate "2024.10.10"]
-[EndTime "00:02:13"]
-[Link "https://www.chess.com/analysis/game/live/122255928737?tab=analysis&move=35"]
-[WhiteUrl "https://images.chesscomfiles.com/uploads/v1/user/194942883.57840a5c.50x50o.761795ba1c62.png"]
-[WhiteCountry "3"]
-[WhiteTitle ""]
-[BlackUrl "https://www.chess.com/bundles/web/images/noavatar_l.84a92436.gif"]
-[BlackCountry "27"]
-[BlackTitle ""]
-
-1. d4 Nf6 2. c4 e6 3. g3 d5 4. Bg2 Be7 5. Nf3 O-O 6. O-O dxc4 7. Qc2 Nc6 $6 8.
-Qxc4 a6 9. Rd1 Ne8 $2 10. e4 $9 Nd6 11. Qe2 Nb5 $6 12. Be3 Bf6 $6 13. e5 Be7 14. a4
-Nba7 15. h4 f6 $6 16. Nc3 f5 $6 17. Ng5 h6 18. Nh3 Nb4 19. Qc4 $2 (19. d5 Qe8 (19...
-exd5 20. Nxd5 Nxd5 21. Bxd5+ Kh7 22. Bg8+ (22. Bf7 Rxf7 23. Rxd8 Bxd8)) 20.
-Rac1) 19... c6 20. Nf4 Nd5 21. Ng6 Rf7 22. Nxe7+ $2 Qxe7 $9 23. Bd2 f4 $2 24. Ne4 Bd7
-25. Nd6 Rff8 26. Nxb7 Nc8 27. Nc5 Ncb6 28. Qd3 Be8 29. a5 Nd7 30. Nxa6 fxg3 31.
-fxg3 Bh5 32. Rf1 Bg4 33. Rxf8+ Qxf8 34. Rf1 Bf5 35. Be4 Qc8 36. Bxf5 exf5 37.
-Nb4 Rxa5 38. Nxc6 Ra6 39. Qc4 $4 (39. Nb4 Nxb4 40. Bxb4 f4 41. gxf4 Rc6 42. f5
-Nb6 43. Bc3) 1-0 */
-
 type MoveIndex = std::num::NonZeroUsize;
 
 #[derive(Clone, Copy, Debug)]
