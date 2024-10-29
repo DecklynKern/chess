@@ -7,6 +7,11 @@ pub struct HumanPlayer {
 }
 
 impl player::Player for HumanPlayer {
+
+    fn get_raw_eval(&mut self, board: &game::Board) -> i32 {
+        0
+    }
+
     fn get_move<'a>(&mut self, _board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
 
         if possible_moves.is_empty() {
@@ -19,7 +24,7 @@ impl player::Player for HumanPlayer {
         println!("Possible moves: ");
 
         for possible_move in possible_moves {
-            print!("{}, ", possible_move.to_an(possible_moves));
+            print!("{}, ", possible_move.as_an(possible_moves));
         }
         println!();
         
@@ -28,12 +33,12 @@ impl player::Player for HumanPlayer {
             println!("Select a move: ");
     
             line = String::new();
-            stdin.read_line(&mut line).unwrap();   
+            stdin.read_line(&mut line).unwrap();
             
             line = line.trim().to_string();
             
             for possible_move in possible_moves {
-                if line == possible_move.to_an(possible_moves) {
+                if line == possible_move.as_an(possible_moves) {
                     return Some(possible_move);
                 }
             }

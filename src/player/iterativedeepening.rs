@@ -109,7 +109,7 @@ impl IterativeDeepening {
         }
 
         if let Some(pv_move) = &best_move {
-            self.pv_table.set(board_hash, pv_move.clone());
+            self.pv_table.set(board_hash, *pv_move);
         }
 
         (score - score.signum(), best_move)
@@ -118,6 +118,11 @@ impl IterativeDeepening {
 }
 
 impl Player for IterativeDeepening {
+
+    fn get_raw_eval(&mut self, board: &game::Board) -> i32 {
+        (self.score_board)(board)
+    }
+    
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
         
         self.nodes_searched = 0;
@@ -147,8 +152,8 @@ impl Player for IterativeDeepening {
 
         }
 
-        println!("nodes searched: {}", self.nodes_searched);
-        println!("total depth: {}", search_depth);
+        // println!("nodes searched: {}", self.nodes_searched);
+        // println!("total depth: {}", search_depth);
         // println!("eval: {}", eval as f64 / 100.0);
 
         best_move.and_then(|valid_move| {

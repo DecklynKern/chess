@@ -8,13 +8,13 @@ fn basic_move_ordering(moves: Vec<game::Move>) -> Vec<game::Move> {
 
     for possible_move in &moves {
         if possible_move.replaced_piece != game::Empty {
-            sorted_moves.push(possible_move.clone());
+            sorted_moves.push(*possible_move);
         }
     }
 
     for possible_move in &moves {
         if possible_move.replaced_piece == game::Empty {
-            sorted_moves.push(possible_move.clone());
+            sorted_moves.push(*possible_move);
         }
     }
 
@@ -114,6 +114,11 @@ impl AlphaBetaPlayer {
 }
 
 impl Player for AlphaBetaPlayer {
+
+    fn get_raw_eval(&mut self, board: &game::Board) -> i32 {
+        (self.score_board)(board)
+    }
+
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
 
         self.transposition_table.clear();

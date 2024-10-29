@@ -17,5 +17,6 @@ pub use scoring::*;
 use crate::game;
 
 pub trait Player {
+    fn get_raw_eval(&mut self, board: &game::Board) -> i32;
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move>;
 }

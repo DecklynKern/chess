@@ -345,12 +345,12 @@ pub fn get_position_info(board: &Board, colour: Colour) -> PositionInfo {
     let opp_diagonal_positions = opp_bishop_positions
         .iter()
         .chain(opp_queen_positions)
-        .map(|pos| *pos);
+        .cloned();
     
     let opp_orthogonal_positions = opp_rook_positions
         .iter()
         .chain(opp_queen_positions)
-        .map(|pos| *pos);
+        .cloned();
 
     opponent_attacked_squares |= calc_sliding_boards(
         board,

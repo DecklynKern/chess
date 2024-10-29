@@ -35,8 +35,8 @@ fn uci() {
     let mut board = game::Board::default();
 
     let mut player: Box<dyn player::Player>;
-    // player = Box::new(player::AlphaBetaPlayer::new(8, &player::advanced_eval));
-    player = Box::new(player::IterativeDeepening::new(1000, &player::advanced_eval));
+    player = Box::new(player::AlphaBetaPlayer::new(6, &player::advanced_eval));
+    // player = Box::new(player::IterativeDeepening::new(1000, &player::advanced_eval));
 
     loop {
 
@@ -50,6 +50,9 @@ fn uci() {
             "setoption" => {}, // can change
             "register" => {}, // ?
             "ucinewgame" => {}, //?
+            "eval" => {
+                println!("Eval: {}", (player.get_raw_eval(&board) as f32) / 100.0)
+            }
             "position" => {
                 let arg2 = split.next().unwrap().trim();
                 if arg2 == "startpos" {
@@ -74,7 +77,7 @@ fn uci() {
             "go" => {
                 let possible_moves = game::get_possible_moves(&board);
                 if let Some(valid_move) = player.get_move(&mut board, &possible_moves) {
-                    let move_text = valid_move.to_long_an();
+                    let move_text = valid_move.as_long_an();
                     println!("bestmove {}", move_text);
                 }
                 else {
@@ -104,7 +107,7 @@ fn perft(fen: String, depth: u32) {
         board.make_move(&mv);
         let next_moves = game::get_num_moves(&mut board, depth - 1);
         total_moves += next_moves;
-        println!("{}: {}", mv.to_long_an(), next_moves);
+        println!("{}: {}", mv.as_long_an(), next_moves);
         board.undo_move();
     }
 
@@ -186,7 +189,7 @@ fn internal_sim() {
 
         match move_to_make {
             Some(valid_move) => {
-                println!("{} is played.\n", valid_move.to_an(&possible_moves));
+                println!("{} is played.\n", valid_move.as_an(&possible_moves));
                 board.make_move(valid_move);
             },
             None => {println!("game over")}

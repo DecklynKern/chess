@@ -27,11 +27,13 @@ pub struct Board {
     pub black_king: Square
 }
 
-impl Board {
-
-    pub fn default() -> Self {
+impl std::default::Default for Board {
+    fn default() -> Self {
         Self::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
     }
+}
+
+impl Board {
 
     pub fn from_fen(f: String) -> Self {
 
@@ -257,13 +259,13 @@ impl Board {
     }
     
     pub fn is_draw_by_insufficient_material(&self) -> bool {
-        self.piece_positions[WhitePawn as usize].len() == 0 && 
-        self.piece_positions[WhiteRook as usize].len() == 0 && 
-        self.piece_positions[WhiteQueen as usize].len() == 0 && 
+        self.piece_positions[WhitePawn as usize].is_empty() && 
+        self.piece_positions[WhiteRook as usize].is_empty() && 
+        self.piece_positions[WhiteQueen as usize].is_empty() && 
         self.piece_positions[WhiteBishop as usize].len() + self.piece_positions[WhiteKnight as usize].len() <= 1 && 
-        self.piece_positions[BlackPawn as usize].len() == 0 && 
-        self.piece_positions[BlackRook as usize].len() == 0 && 
-        self.piece_positions[BlackQueen as usize].len() == 0 && 
+        self.piece_positions[BlackPawn as usize].is_empty() && 
+        self.piece_positions[BlackRook as usize].is_empty() && 
+        self.piece_positions[BlackQueen as usize].is_empty() && 
         self.piece_positions[BlackBishop as usize].len() + self.piece_positions[WhiteKnight as usize].len() <= 1
     }
 
@@ -356,19 +358,19 @@ impl Board {
 
         self.en_passant_chance = (move_to_make.move_type == MoveType::PawnDouble).then(|| opp_colour.offset_rank(move_to_make.end_square));
         self.side_to_move = opp_colour;
-        self.previous_moves.push(move_to_make.clone());
+        self.previous_moves.push(*move_to_make);
         self.turns_taken += 1;
 
     }
 
-    pub fn undo_move(&mut self) {
+    pub fn undo_move(&mut self) -> Option<Move> {
 
         let opp_colour = self.side_to_move;
         let move_colour = opp_colour.opposite();
 
         let Some(move_to_undo) = self.previous_moves.pop()
         else {
-            return;
+            return None;
         };
         
         match move_to_undo.move_type {
@@ -444,6 +446,8 @@ impl Board {
         self.castling_rights = move_to_undo.old_castling_rights;
         self.side_to_move = move_colour;
         self.turns_taken -= 1;
+
+        Some(move_to_undo)
 
     }
 }

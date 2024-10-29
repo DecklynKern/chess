@@ -59,6 +59,11 @@ impl MiniMaxPlayer {
 }
 
 impl Player for MiniMaxPlayer {
+
+    fn get_raw_eval(&mut self, board: &game::Board) -> i32 {
+        (self.score_board)(board)
+    }
+    
     fn get_move<'a>(&mut self, board: &mut game::Board, possible_moves: &'a [game::Move]) -> Option<&'a game::Move> {
         
         let mut best_move = None;

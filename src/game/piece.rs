@@ -65,8 +65,8 @@ impl Colour {
 
     pub fn offset_rank(self, square: Square) -> Square {
         match self {
-            White => square - 16,
-            Black => square + 16 
+            White => square.overflowing_sub(16).0,
+            Black => square.overflowing_add(16).0
         }
     }
 
