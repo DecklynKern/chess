@@ -14,7 +14,7 @@ pub enum GameResult {
 
 #[derive(Debug)]
 pub struct MoveNode {
-    played_move: Move,
+    pub played_move: Move,
     main_line: Option<MoveIndex>,
     alternatives: Vec<MoveIndex>
 }
@@ -22,10 +22,22 @@ pub struct MoveNode {
 #[derive(Debug)]
 pub struct Game {
     pub result: GameResult,
-    pub move_list: Vec<MoveNode>
+    move_list: Vec<MoveNode>
 }
 
 impl Game {
+
+    pub fn get_root(&self) -> &MoveNode {
+        &self.move_list[0]
+    }
+
+    pub fn get_main_line(&self, current_move: &MoveNode) -> Option<&MoveNode> {
+        current_move.main_line.map(|idx| &self.move_list[idx.get()])
+    }
+
+    pub fn get_alternatives(&self, current_move: &MoveNode) -> Vec<&MoveNode> {
+        current_move.alternatives.iter().map(|idx| &self.move_list[idx.get()]).collect()
+    }
 
     fn parse_line<'a>(text: &mut impl Iterator<Item = &'a str>, board: &mut Board, move_list: &mut Vec<MoveNode>) -> Option<MoveIndex> {
 
