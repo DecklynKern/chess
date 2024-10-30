@@ -78,13 +78,13 @@ impl Game {
             board.make_move(&played_move);
             num_moves += 1;
 
+            let new_move_idx = move_list.len();
+
             move_list.push(MoveNode {
                 played_move,
                 main_line: None,
                 alternatives: Vec::new()
             });
-
-            let new_move_idx = move_list.len();
 
             if let Some(idx) = last_move_idx {
                 move_list[idx].main_line = MoveIndex::new(new_move_idx);
