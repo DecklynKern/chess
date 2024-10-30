@@ -41,7 +41,7 @@ impl Game {
 
     fn parse_line<'a>(text: &mut impl Iterator<Item = &'a str>, board: &mut Board, move_list: &mut Vec<MoveNode>) -> Option<MoveIndex> {
 
-        let mut last_move_idx: Option<MoveIndex> = None;
+        let mut last_move_idx: Option<usize> = None;
         let mut num_moves = 0;
 
         while let Some(mut chunk) = text.next() {
@@ -61,7 +61,7 @@ impl Game {
                 let last_move = board.undo_move().unwrap();
 
                 if let Some(alternative_move) = Self::parse_line(text, board, move_list) {
-                    move_list[last_move_idx.unwrap().get()].alternatives.push(alternative_move);
+                    move_list[last_move_idx.unwrap()].alternatives.push(alternative_move);
                 }
 
                 board.make_move(&last_move);
@@ -87,10 +87,10 @@ impl Game {
             let new_move_idx = move_list.len();
 
             if let Some(idx) = last_move_idx {
-                move_list[idx.get()].main_line = MoveIndex::new(new_move_idx);
+                move_list[idx].main_line = MoveIndex::new(new_move_idx);
             }
 
-            last_move_idx = MoveIndex::new(new_move_idx);
+            last_move_idx = Some(new_move_idx);
 
         }
 
@@ -98,7 +98,7 @@ impl Game {
             board.undo_move();
         }
 
-        last_move_idx
+        last_move_idx.and_then(MoveIndex::new)
 
     }
     
@@ -127,8 +127,6 @@ impl Game {
 
         let moves_text = lines.fold(String::new(), |acc, line| acc + " " + line);
         let mut moves_split = moves_text.split_inclusive(&[' ', '(', ')']);
-
-        println!("{moves_text}");
 
         let mut board = Board::default();
         let mut move_list = Vec::new();
